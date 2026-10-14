@@ -6,3 +6,5 @@
 /.e2e-site/
 /tests/e2e/shots/
 /.wp-env.override.json
+.phpactor.json
+.DS_Store
