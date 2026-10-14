@@ -1,0 +1,44 @@
+{
+  "name": "orbitwrite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Orbitwrite for WordPress: write a social post in WordPress and publish or schedule it with Orbitwrite.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "build": "wp-scripts build src/editor.js src/admin.js src/classic.js src/auto-share.js src/dashboard.js",
+    "start": "wp-scripts start src/editor.js src/admin.js src/classic.js src/auto-share.js src/dashboard.js",
+    "lint:js": "wp-scripts lint-js src tests --ext .js,.mjs",
+    "lint:css": "wp-scripts lint-style 'src/**/*.scss'",
+    "test:js": "wp-scripts test-unit-js tests/js",
+    "plugin-zip": "npm run build && wp-scripts plugin-zip",
+    "env": "wp-env",
+    "test:e2e": "tests/e2e/run.sh",
+    "test:contract": "node --test tests/contract/contract.test.mjs",
+    "openapi:sync": "node scripts/sync-openapi.mjs",
+    "test": "npm run test:js && npm run test:contract",
+    "openapi:check": "node scripts/sync-openapi.mjs && git diff --exit-code -- openapi/"
+  },
+  "files": [
+    "orbitwrite.php",
+    "uninstall.php",
+    "readme.txt",
+    "LICENSE",
+    "includes",
+    "build",
+    "src",
+    "package.json"
+  ],
+  "devDependencies": {
+    "@wordpress/element": "^8.8.0",
+    "@wordpress/env": "^10.0.0",
+    "@wordpress/i18n": "^6.30.0",
+    "@wordpress/scripts": "^30.0.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "playwright-core": "^1.64.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

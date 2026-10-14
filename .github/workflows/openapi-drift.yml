@@ -1,0 +1,20 @@
+name: API contract drift
+
+# Orbitwrite's API moves on its own schedule. Once a week, cut the slice of
+# the live spec this plugin uses and fail if it differs from the vendored
+# openapi/orbitwrite.json, so a change reaches a person before it reaches a
+# user. Fix: `npm run openapi:sync`, run the tests, commit.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm run openapi:check

@@ -1,0 +1,13 @@
+{
+  "plugins": [
+    ".",
+    "https://downloads.wordpress.org/plugin/classic-editor.zip"
+  ],
+  "config": {
+    "WP_HOME": "https://REPLACE-ME.trycloudflare.com",
+    "WP_SITEURL": "https://REPLACE-ME.trycloudflare.com"
+  },
+  "mappings": {
+    "wp-content/mu-plugins/tunnel-https.php": "./dev/tunnel-https.php"
+  }
+}

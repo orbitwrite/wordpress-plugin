@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: sodium, gd
+          tools: composer
+
+      - run: npm ci
+      - run: composer install --no-interaction --no-progress
+
+      - run: npm run lint:js
+      - run: npm run lint:css
+      - run: composer lint
+      - run: composer test
+      - run: npm run test:js
+      # What the PHP sends, and what the mock answers, against the vendored
+      # slice of Orbitwrite's OpenAPI spec.
+      - run: npm run test:contract
+      - run: npm run build
+
+  php-compat:
+    # The oldest PHP the plugin claims to support.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "7.4"
+          tools: composer
+      - run: composer install --no-interaction --no-progress
+      - run: composer test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: sodium, pdo_sqlite, gd
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: tests/e2e/shots/
