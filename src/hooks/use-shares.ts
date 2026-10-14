@@ -1,7 +1,13 @@
 /**
  * What was sent to Orbitwrite from an article.
  */
-import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from '@wordpress/element';
 
 import * as api from '../lib/api';
 import { stillMoving } from '../lib/shares';
@@ -15,7 +21,6 @@ export interface Sent {
 	loaded: boolean;
 	add: ( sent: Share[] ) => void;
 	remove: ( groupId: string ) => void;
-	reload: () => Promise< SharesAnswer | null >;
 	watchPublishing: ( justPublished?: boolean, tries?: number ) => void;
 }
 
@@ -28,7 +33,8 @@ const POLL_TRIES = 20;
  * what auto-share will do with it. Only used while connected.
  *
  * @param postId 0 when there's no article.
- * @return `{ shares, autoShare, setAutoShare, timezone, loaded, add, remove, reload, watchPublishing }`.
+ * @return `{ shares, autoShare, setAutoShare, timezone, loaded, add, remove, watchPublishing }`,
+ *   stable while none of it changes.
  */
 export function useShares( postId: number ): Sent {
 	const [ shares, setShares ] = useState< Share[] >( [] );
@@ -95,15 +101,17 @@ export function useShares( postId: number ): Sent {
 		[]
 	);
 
-	return {
-		shares,
-		autoShare,
-		setAutoShare,
-		timezone,
-		loaded,
-		add,
-		remove,
-		reload: load,
-		watchPublishing,
-	};
+	return useMemo(
+		() => ( {
+			shares,
+			autoShare,
+			setAutoShare,
+			timezone,
+			loaded,
+			add,
+			remove,
+			watchPublishing,
+		} ),
+		[ shares, autoShare, timezone, loaded, add, remove, watchPublishing ]
+	);
 }

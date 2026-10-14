@@ -64,7 +64,7 @@ export default function Orbitwrite() {
 				icon="share"
 			>
 				<DocumentPanel
-					connection={ connection }
+					status={ connection.status }
 					postId={ postId }
 					sent={ sent }
 					numbers={ numbers }

@@ -27,9 +27,9 @@ import { useEffect } from '@wordpress/element';
 import { useConnection } from '../hooks/use-connection';
 import type { Connection } from '../hooks/use-connection';
 import type { Status } from '../lib/types';
+import ComposerForm from './composer-form';
 import ConnectPrompt from './connect-prompt';
-import Editing from './editing';
-import type { ComposerProps } from './editing';
+import type { ComposerProps } from './types';
 
 export type { ComposerProps };
 
@@ -104,7 +104,8 @@ export function ComposerView( {
 		return (
 			<ConnectPrompt
 				status={ status }
-				connection={ connection }
+				notice={ connection.notice }
+				onDismissNotice={ () => connection.setNotice( null ) }
 				padded={ layout === 'panels' }
 			/>
 		);
@@ -114,7 +115,7 @@ export function ComposerView( {
 	// a draft to an article. A change of any of them is a different editor.
 	const scope = `${ status.draftScope }:${ status.organization?.id || '' }`;
 	return (
-		<Editing
+		<ComposerForm
 			key={ `${ scope }:${ postId }` }
 			scope={ scope }
 			status={ status }

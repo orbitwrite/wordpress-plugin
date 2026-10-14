@@ -12,7 +12,7 @@
  * storage is shared by every site on a domain (subdirectory multisite) and
  * every WordPress user on the machine.
  */
-import type { Image, Versions } from './types';
+import type { Image, Versions, When } from './types';
 
 /** An unsent post. */
 export interface Draft {
@@ -28,7 +28,8 @@ export interface Draft {
 /** How a person last posted. */
 export interface Prefs {
 	selected: string[] | null;
-	when: 'next' | 'at';
+	/** "Now" is never remembered. */
+	when: Exclude< When, 'now' >;
 }
 
 export const EMPTY_DRAFT: Readonly< Draft > = Object.freeze( {

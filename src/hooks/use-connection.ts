@@ -1,7 +1,7 @@
 /**
  * The user's connection to Orbitwrite.
  */
-import { useCallback, useEffect, useState } from '@wordpress/element';
+import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
 
 import * as api from '../lib/api';
 import type { Notice, Status } from '../lib/types';
@@ -31,7 +31,8 @@ function takeBootStatus(): Status | null {
 /**
  * The user's connection, and a one-shot notice the OAuth flow left.
  *
- * @return `{ status, error, notice, setNotice, reload }`.
+ * @return `{ status, error, notice, setNotice, reload }`, stable while none
+ *   of it changes.
  */
 export function useConnection(): Connection {
 	const [ boot ] = useState( takeBootStatus );
@@ -60,5 +61,8 @@ export function useConnection(): Connection {
 		}
 	}, [ boot, reload ] );
 
-	return { status, error, notice, setNotice, reload };
+	return useMemo(
+		() => ( { status, error, notice, setNotice, reload } ),
+		[ status, error, notice, reload ]
+	);
 }

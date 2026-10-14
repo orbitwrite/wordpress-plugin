@@ -5,7 +5,7 @@ import {
 	editVersion,
 	giveOwnVersion,
 	hasOwnVersion,
-	mainPostInUse,
+	onMainPost,
 	sendPayload,
 } from '../../src/lib/versions';
 import { image } from './fixtures';
@@ -55,10 +55,12 @@ describe( 'channel versions', () => {
 		expect( contentFor( main, versions, 'x' ).image ).toBe( main.image );
 	} );
 
-	it( 'knows when nobody uses the main post', () => {
+	it( 'knows who uses the main post', () => {
 		const versions = giveOwnVersion( {}, 'x', main );
-		expect( mainPostInUse( [ 'x', 'y' ], versions ) ).toBe( true );
-		expect( mainPostInUse( [ 'x' ], versions ) ).toBe( false );
+		expect( onMainPost( [ { id: 'x' }, { id: 'y' } ], versions ) ).toEqual(
+			[ { id: 'y' } ]
+		);
+		expect( onMainPost( [ { id: 'x' } ], versions ) ).toEqual( [] );
 	} );
 
 	it( 'sends synced channels bare and own versions in full', () => {

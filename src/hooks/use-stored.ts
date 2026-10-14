@@ -44,11 +44,12 @@ const always = () => true;
  *
  * @param key
  * @param empty Its starting value.
- * @param keep  Whether a value is worth storing; else removed.
+ * @param keep  Whether a value is worth storing; else removed. Keep it
+ *              stable (a module-level function), as it's an effect dependency.
  * @return The value, `update( changes )` (an object, or a function of the
  *   value), and `clear()`.
  */
-export default function useStored< T extends object >(
+export function useStored< T extends object >(
 	key: string,
 	empty: T,
 	keep: ( value: T ) => boolean = always
@@ -57,7 +58,7 @@ export default function useStored< T extends object >(
 
 	useEffect( () => {
 		save( key, value, keep );
-	}, [ key, value ] ); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [ key, value, keep ] );
 
 	const update = useCallback(
 		( changes: Changes< T > ) =>

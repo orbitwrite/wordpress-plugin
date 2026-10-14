@@ -136,11 +136,11 @@ includes/               PHP, one class per file (class-foo-bar.php → Foo_Bar)
 src/                    the UI in TypeScript (built to build/ by wp-scripts)
   editor.tsx classic.tsx admin.tsx   entry points: where the composer mounts
   auto-share.tsx dashboard.tsx       entry points: auto-share settings, dashboard widget
-  lib/                               pure logic, no React (unit tested in tests/js)
+  lib/                               logic without React (unit tested in tests/js)
   lib/api.ts lib/types.ts            the plugin's REST routes and what they answer
   hooks/                             React hooks shared across screens, one per file
   components/                        small shared UI pieces
-  composer/                          the composer: sections, channel list, its hooks
+  composer/                          the composer: form, sections, channel list, its hooks
   block-editor/ classic-editor/      each editor's integration around the composer
   auto-share-settings/ summary/      the settings form, the last-four-weeks summary
   styles/                            composer.scss

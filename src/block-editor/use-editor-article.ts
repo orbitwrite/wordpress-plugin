@@ -7,7 +7,6 @@ import { store as editorStore } from '@wordpress/editor';
 import { useMemo } from '@wordpress/element';
 
 import { imageFromRest } from '../lib/media';
-import type { RestMedia } from '../lib/media';
 import type { Article } from '../lib/types';
 
 /**
@@ -27,9 +26,7 @@ export function useEditorArticle(): { postId: number; article: Article } {
 					store.getPermalink() ||
 					store.getEditedPostAttribute( 'link' ),
 				status: store.getEditedPostAttribute( 'status' ),
-				featuredId: store.getEditedPostAttribute(
-					'featured_media'
-				) as number,
+				featuredId: store.getEditedPostAttribute( 'featured_media' ),
 			};
 		},
 		[]
@@ -40,10 +37,7 @@ export function useEditorArticle(): { postId: number; article: Article } {
 		[ featuredId ]
 	);
 
-	const featured = useMemo(
-		() => imageFromRest( media as RestMedia | null ),
-		[ media ]
-	);
+	const featured = useMemo( () => imageFromRest( media ), [ media ] );
 	const article = useMemo(
 		() => ( { title, link, status, featured } ),
 		[ title, link, status, featured ]

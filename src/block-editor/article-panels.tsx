@@ -9,8 +9,8 @@ import { __ } from '@wordpress/i18n';
 import AutoShareNotices from '../components/auto-share-notices';
 import AutoShareToggle from '../components/auto-share-toggle';
 import type { ArticleShares } from '../hooks/use-article-shares';
-import type { Connection } from '../hooks/use-connection';
 import { autoSharePending, isAutoSharing } from '../lib/shares';
+import type { Status } from '../lib/types';
 import ShareSummary from './share-summary';
 
 interface PanelProps extends ArticleShares {
@@ -23,21 +23,20 @@ interface PanelProps extends ArticleShares {
  * sent, and the way into the composer.
  *
  * @param props
- * @param props.connection From useConnection().
+ * @param props.status  The connection, null until read.
  * @param props.postId
  * @param props.sent
  * @param props.numbers
  * @param props.onOpen
  */
 export function DocumentPanel( {
-	connection,
+	status,
 	postId,
 	sent,
 	numbers,
 	onOpen,
-}: PanelProps & { connection: Connection; postId: number } ) {
+}: PanelProps & { status: Status | null; postId: number } ) {
 	const [ error, setError ] = useState< string | null >( null );
-	const status = connection.status;
 
 	if ( ! status ) {
 		return <Spinner />;

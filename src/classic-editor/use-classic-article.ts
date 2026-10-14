@@ -6,7 +6,7 @@
  * when a new post gets its slug), and the featured image box (replaced
  * whenever the image is set or removed).
  */
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
 
 import { fetchImage } from '../lib/media';
 import type { Article, Image } from '../lib/types';
@@ -43,7 +43,8 @@ function readThumbnailId(): number {
  * Re-read a value whenever an element's contents change.
  *
  * @param selector
- * @param read
+ * @param read     Keep it stable (useCallback): the watch restarts when it
+ *                 changes.
  * @return The latest value.
  */
 function useWatched< T >( selector: string, read: () => T ): T {
@@ -63,7 +64,7 @@ function useWatched< T >( selector: string, read: () => T ): T {
 			attributes: true,
 		} );
 		return () => observer.disconnect();
-	}, [] ); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [ selector, read ] );
 	return value;
 }
 
@@ -124,9 +125,11 @@ export function useClassicArticle(
 	status: string
 ): Article {
 	const title = useTitle();
-	const link = useWatched( '#edit-slug-box', () =>
-		readPermalink( permalink )
+	const readLink = useCallback(
+		() => readPermalink( permalink ),
+		[ permalink ]
 	);
+	const link = useWatched( '#edit-slug-box', readLink );
 	const featured = useFeaturedImage();
 	return useMemo(
 		() => ( { title, link, status, featured } ),

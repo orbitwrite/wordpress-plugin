@@ -8,13 +8,13 @@ import { __, sprintf } from '@wordpress/i18n';
 import AutoShareNotices from '../components/auto-share-notices';
 import AutoShareToggle from '../components/auto-share-toggle';
 import NoticeMessage from '../components/notice-message';
-import type { Connection } from '../hooks/use-connection';
 import type { Sent } from '../hooks/use-shares';
-import type { Status } from '../lib/types';
+import type { Notice, Status } from '../lib/types';
 
 interface Props {
 	status: Status;
-	connection: Connection;
+	notice: Notice | null;
+	onDismissNotice: () => void;
 	postId: number;
 	sent: Sent;
 	showAutoShare: boolean;
@@ -25,21 +25,18 @@ interface Props {
 
 export default function ComposerHead( {
 	status,
-	connection,
+	notice,
+	onDismissNotice,
 	postId,
 	sent,
 	showAutoShare,
 	onDisconnect,
 	onError,
 }: Props ) {
-	const { notice, setNotice } = connection;
 	return (
 		<div className="orbitwrite-composer__head">
 			{ notice && (
-				<NoticeMessage
-					notice={ notice }
-					onRemove={ () => setNotice( null ) }
-				/>
+				<NoticeMessage notice={ notice } onRemove={ onDismissNotice } />
 			) }
 			<p className="orbitwrite-composer__workspace">
 				{ sprintf(

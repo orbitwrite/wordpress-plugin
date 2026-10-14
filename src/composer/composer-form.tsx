@@ -2,54 +2,32 @@
  * The composer once connected: the draft, where it goes, when, and what
  * was already sent from the article.
  */
-import { useCallback, useMemo, useState } from '@wordpress/element';
+import { useCallback } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 import SentList from '../components/sent-list';
 import { useArticleShares } from '../hooks/use-article-shares';
-import type { ArticleShares } from '../hooks/use-article-shares';
 import { useChannels } from '../hooks/use-channels';
 import type { Connection } from '../hooks/use-connection';
-import useStored from '../hooks/use-stored';
 import * as api from '../lib/api';
-import {
-	DEFAULT_PREFS,
-	EMPTY_DRAFT,
-	draftKey,
-	prefsKey,
-	worthKeeping,
-} from '../lib/draft';
-import { channelProblems } from '../lib/rules';
+import { worthKeeping } from '../lib/draft';
+import { anyBlocked } from '../lib/rules';
 import { autoSharePending } from '../lib/shares';
-import type { Article, Notice, Share, Status } from '../lib/types';
-import { contentFor, hasOwnVersion, sendPayload } from '../lib/versions';
+import type { Share, Status } from '../lib/types';
+import { onMainPost, sendPayload } from '../lib/versions';
 import ChannelsSection from './channels-section';
 import ComposerHead from './composer-head';
+import { confirmed } from './confirm';
 import MainPostSection from './main-post-section';
 import { mainPostHelp, sendLabel, sentNotice } from './messages';
 import Section from './section';
 import SendFooter from './send-footer';
+import type { ComposerProps } from './types';
 import { useChannelPicks } from './use-channel-picks';
-import { useFollowArticle } from './use-follow-article';
+import { useComposerDraft } from './use-composer-draft';
 import { useSchedule } from './use-schedule';
+import { useSend } from './use-send';
 import WhenSection from './when-section';
-
-/** What the composer is for, and how it's laid out. */
-export interface ComposerProps {
-	/** The article, when there is one. */
-	postId?: number;
-	/** `{ title, link, status, featured }`. */
-	article?: Article | null;
-	/** The article's posts, when the block editor holds them above. */
-	articleState?: ArticleShares | null;
-	layout?: 'plain' | 'panels';
-	/** Says a send worked (a snackbar); a notice here otherwise. */
-	notify?: ( ( notice: Notice ) => void ) | null;
-	/** Offer the article's auto-share checkbox. */
-	showAutoShare?: boolean;
-	/** Offer Disconnect. */
-	allowDisconnect?: boolean;
-}
 
 interface Props extends Required< ComposerProps > {
 	/** Site, person and workspace. */
@@ -58,16 +36,7 @@ interface Props extends Required< ComposerProps > {
 	connection: Connection;
 }
 
-/**
- * Ask before something that can't be undone.
- *
- * @param question
- * @return Whether the person said yes.
- */
-// eslint-disable-next-line no-alert
-const confirmed = ( question: string ) => window.confirm( question );
-
-export default function Editing( {
+export default function ComposerForm( {
 	scope,
 	status,
 	connection,
@@ -80,9 +49,7 @@ export default function Editing( {
 	allowDisconnect,
 }: Props ) {
 	const panels = layout === 'panels';
-	const { setNotice, reload } = connection;
-	const [ sending, setSending ] = useState( false );
-	const [ error, setError ] = useState< string | null >( null );
+	const { notice, setNotice, reload } = connection;
 
 	const onDisconnected = useCallback(
 		( err: unknown ) => {
@@ -105,42 +72,16 @@ export default function Editing( {
 	);
 	const { sent, numbers } = articleState || ownShares;
 
-	const [ draft, update, clearDraft ] = useStored(
-		draftKey( scope, postId ),
-		EMPTY_DRAFT,
-		worthKeeping
-	);
-	const [ prefs, updatePrefs ] = useStored(
-		prefsKey( scope ),
-		DEFAULT_PREFS
-	);
-	useFollowArticle( article, draft, update );
-
-	// --- Channels and content ----------------------------------------------
-
-	const main = useMemo(
-		() => ( { text: draft.text, image: draft.image } ),
-		[ draft.text, draft.image ]
+	const { draft, update, clear, main, prefs, updatePrefs } = useComposerDraft(
+		scope,
+		postId,
+		article
 	);
 	const { selectedChannels, selectedIds, onSelect } = useChannelPicks(
 		channels,
 		prefs,
 		updatePrefs
 	);
-	const blocked = selectedChannels.some(
-		( channel ) =>
-			channelProblems(
-				channel,
-				contentFor( main, draft.versions, channel.id ),
-				hasOwnVersion( draft.versions, channel.id )
-			).length > 0
-	);
-	const mainUsers = selectedChannels.filter(
-		( channel ) => ! hasOwnVersion( draft.versions, channel.id )
-	);
-
-	// --- When ---------------------------------------------------------------
-
 	const schedule = useSchedule( {
 		prefs,
 		updatePrefs,
@@ -148,57 +89,47 @@ export default function Editing( {
 		timezone,
 		accountIds: selectedIds,
 	} );
-	const { when, at } = schedule;
-
-	// --- Actions ------------------------------------------------------------
 
 	// After sending, start fresh, following the article again. The channels
 	// and timing are preferences, so they stay; "Now" goes back to scheduling.
 	const startOver = () => {
-		clearDraft();
+		clear();
 		schedule.reset();
 	};
 
-	const onSend = () => {
-		setSending( true );
-		setError( null );
-		api.send( {
-			postId,
+	const { sending, error, setError, clearError, send, discard } = useSend( {
+		postId,
+		sent,
+		onDisconnected,
+		onSent: ( shares ) => {
+			const said = sentNotice( shares, timezone );
+			if ( notify ) {
+				notify( said );
+			} else {
+				setNotice( said );
+			}
+			startOver();
+		},
+	} );
+
+	const onSend = () =>
+		send( {
 			...sendPayload( selectedIds, main, draft.versions ),
-			when,
-			at: when === 'at' ? at : '',
-		} )
-			.then( ( { shares } ) => {
-				const said = sentNotice( shares, timezone );
-				if ( notify ) {
-					notify( said );
-				} else {
-					setNotice( said );
-				}
-				sent.add( shares );
-				if ( shares[ 0 ].status === 'publishing' ) {
-					sent.watchPublishing();
-				}
-				startOver();
-			} )
-			.catch( api.handleError( onDisconnected, setError ) )
-			.finally( () => setSending( false ) );
-	};
+			when: schedule.when,
+			at: schedule.when === 'at' ? schedule.at : '',
+		} );
 
 	const onDelete = ( share: Share ) => {
 		if (
-			! confirmed(
+			confirmed(
 				__(
 					"Delete this post from Orbitwrite? It won't go out.",
 					'orbitwrite'
 				)
 			)
 		) {
-			return;
+			discard( share );
 		}
-		api.discard( postId, share.groupId )
-			.then( () => sent.remove( share.groupId ) )
-			.catch( ( err ) => setError( api.messageOf( err ) ) );
 	};
 
 	const onStartOver = () => {
@@ -218,18 +149,18 @@ export default function Editing( {
 
 	const onDisconnect = () => api.disconnect().then( reload );
 
-	const autoShareOn =
-		postId > 0 && autoSharePending( sent ) && !! sent.autoShare?.enabled;
+	const blocked = anyBlocked( selectedChannels, main, draft.versions );
 	const canSend =
 		! sending && selectedIds.length > 0 && ! blocked && schedule.ready;
-
-	// --- Render -------------------------------------------------------------
+	const autoShareOn =
+		postId > 0 && autoSharePending( sent ) && !! sent.autoShare?.enabled;
 
 	return (
 		<div className={ `orbitwrite-composer${ panels ? ' is-panels' : '' }` }>
 			<ComposerHead
 				status={ status }
-				connection={ connection }
+				notice={ notice }
+				onDismissNotice={ () => setNotice( null ) }
 				postId={ postId }
 				sent={ sent }
 				showAutoShare={ showAutoShare }
@@ -241,7 +172,10 @@ export default function Editing( {
 				panels={ panels }
 				draft={ draft }
 				update={ update }
-				help={ mainPostHelp( selectedChannels, mainUsers ) }
+				help={ mainPostHelp(
+					selectedChannels,
+					onMainPost( selectedChannels, draft.versions )
+				) }
 			/>
 
 			<ChannelsSection
@@ -269,9 +203,14 @@ export default function Editing( {
 				}
 				hasArticle={ !! article }
 				error={ error }
-				onDismissError={ () => setError( null ) }
+				onDismissError={ clearError }
 				blocked={ blocked }
-				label={ sendLabel( when, schedule.nextSlot.at, at, timezone ) }
+				label={ sendLabel(
+					schedule.when,
+					schedule.nextSlot.at,
+					schedule.at,
+					timezone
+				) }
 				canSend={ canSend }
 				sending={ sending }
 				onSend={ onSend }

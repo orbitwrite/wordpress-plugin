@@ -95,13 +95,19 @@ export interface Share {
 	canDelete: boolean;
 }
 
+/** When a post goes out: the next free slot, a picked time, or now. */
+export type When = 'next' | 'at' | 'now';
+
+/** When auto-share sends an article once it's published. */
+export type AutoShareWhen = Exclude< When, 'at' >;
+
 /** What auto-share will do, or did, with one article. */
 export interface ArticleAutoShare {
 	pending: boolean;
 	enabled: boolean;
 	isAuthor: boolean;
 	authorName: string;
-	when: 'next' | 'now';
+	when: AutoShareWhen;
 	channels: number;
 	state: 'queued' | 'sending' | 'sent' | 'failed' | 'skipped' | null;
 	error: string | null;
@@ -161,7 +167,7 @@ export interface AutoShareSettings {
 	accountIds: string[];
 	template: string;
 	image: boolean;
-	when: 'next' | 'now';
+	when: AutoShareWhen;
 	postTypes: string[];
 }
 
@@ -173,8 +179,6 @@ export interface AutoShareAnswer {
 	defaultTemplate: string;
 	sample: { title: string; values: Record< string, string > } | null;
 }
-
-export type When = 'next' | 'at' | 'now';
 
 /** An image picked for a post. */
 export interface Image {

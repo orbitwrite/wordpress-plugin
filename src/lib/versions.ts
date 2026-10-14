@@ -108,17 +108,19 @@ export function copyMainPost(
 }
 
 /**
- * Whether any of these channels sends the main post.
+ * The channels that send the main post.
  *
- * @param selected
+ * @param channels
  * @param versions
- * @return Whether.
+ * @return Those without their own version.
  */
-export function mainPostInUse(
-	selected: string[],
+export function onMainPost< T extends { id: string } >(
+	channels: T[],
 	versions: Versions
-): boolean {
-	return selected.some( ( id ) => ! hasOwnVersion( versions, id ) );
+): T[] {
+	return channels.filter(
+		( channel ) => ! hasOwnVersion( versions, channel.id )
+	);
 }
 
 /**

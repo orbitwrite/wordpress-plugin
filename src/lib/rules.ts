@@ -10,7 +10,8 @@
 import { __, sprintf } from '@wordpress/i18n';
 
 import { countFor, limitFor } from './text';
-import type { AspectRange, Channel, Content } from './types';
+import type { AspectRange, Channel, Content, Versions } from './types';
+import { contentFor, hasOwnVersion } from './versions';
 
 /** Slack for rounding in stored dimensions, as in class-aspect.php. */
 const ASPECT_TOLERANCE = 0.01;
@@ -249,4 +250,27 @@ export function channelProblems(
 		}
 	}
 	return problems;
+}
+
+/**
+ * Whether any of these channels can't take what it would send.
+ *
+ * @param channels The picked channels.
+ * @param main
+ * @param versions
+ * @return Whether.
+ */
+export function anyBlocked(
+	channels: Channel[],
+	main: Content,
+	versions: Versions
+): boolean {
+	return channels.some(
+		( channel ) =>
+			channelProblems(
+				channel,
+				contentFor( main, versions, channel.id ),
+				hasOwnVersion( versions, channel.id )
+			).length > 0
+	);
 }
