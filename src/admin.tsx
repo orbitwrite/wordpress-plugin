@@ -7,10 +7,10 @@ import domReady from '@wordpress/dom-ready';
 import { createRoot, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
-import Composer from './shared/composer';
-import Summary from './shared/summary';
-import type { Status } from './shared/types';
-import './shared/composer.scss';
+import Composer from './composer';
+import Summary from './summary';
+import type { Status } from './lib/types';
+import './styles/composer.scss';
 
 /**
  * The page. The composer owns the connection; the summary follows it, so

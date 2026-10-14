@@ -14,6 +14,8 @@ import type {
 	ReactNode,
 } from 'react';
 
+import type { PickedMedia } from '../lib/media';
+
 /** A checkbox whose label is any content, not only text: it's rendered inside the `<label>`. */
 export const CheckboxControl = WPCheckboxControl as ComponentType<
 	Omit< ComponentProps< typeof WPCheckboxControl >, 'label' > & {
@@ -29,17 +31,6 @@ export const MenuItem = WPMenuItem as ComponentType<
 		rel?: string;
 	}
 >;
-
-/** What the media modal hands back for a picked attachment. */
-export interface PickedMedia {
-	id: number;
-	url: string;
-	alt?: string;
-	mime?: string;
-	width?: number;
-	height?: number;
-	sizes?: Record< string, { url: string } | undefined >;
-}
 
 /** The Media Library modal; its published types declare no props. */
 export const MediaUpload = WPMediaUpload as unknown as ComponentType< {

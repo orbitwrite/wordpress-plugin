@@ -1,4 +1,4 @@
-import { stillMoving } from '../../src/shared/still-moving';
+import { stillMoving } from '../../src/lib/shares';
 import { autoShare, share as makeShare } from './fixtures';
 
 describe( 'stillMoving', () => {

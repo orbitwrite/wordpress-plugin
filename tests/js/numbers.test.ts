@@ -1,4 +1,4 @@
-import { formatChange, numberPhrases } from '../../src/shared/numbers';
+import { formatChange, numberPhrases } from '../../src/lib/numbers';
 
 describe( 'numberPhrases', () => {
 	it( 'says each reported number, in order', () => {

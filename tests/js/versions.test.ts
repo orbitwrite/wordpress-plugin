@@ -7,7 +7,7 @@ import {
 	hasOwnVersion,
 	mainPostInUse,
 	sendPayload,
-} from '../../src/shared/versions';
+} from '../../src/lib/versions';
 import { image } from './fixtures';
 
 const main = {

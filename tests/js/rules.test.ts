@@ -5,13 +5,13 @@ import {
 	channelProblems,
 	isPostable,
 	unavailableReason,
-} from '../../src/shared/rules';
+} from '../../src/lib/rules';
 import {
 	EMPTY_DRAFT,
 	draftKey,
 	prefsKey,
 	worthKeeping,
-} from '../../src/shared/use-draft';
+} from '../../src/lib/draft';
 
 import { channel, image, media } from './fixtures';
 

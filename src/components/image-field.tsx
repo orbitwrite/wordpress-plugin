@@ -5,7 +5,8 @@
 import { Button, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import type { Image } from './types';
+import { imageFromPicked } from '../lib/media';
+import type { Image } from '../lib/types';
 import { MediaUpload } from './wp-components';
 
 interface Props {
@@ -32,14 +33,7 @@ export default function ImageField( { image, onChange, label }: Props ) {
 						allowedTypes={ [ 'image' ] }
 						value={ image?.id }
 						onSelect={ ( media ) =>
-							onChange( {
-								id: media.id,
-								url: media.sizes?.medium?.url || media.url,
-								alt: media.alt || '',
-								mime: media.mime || '',
-								width: media.width || 0,
-								height: media.height || 0,
-							} )
+							onChange( imageFromPicked( media ) )
 						}
 						render={ ( { open } ) => (
 							<Button

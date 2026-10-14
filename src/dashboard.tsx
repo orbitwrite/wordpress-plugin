@@ -4,8 +4,8 @@
 import domReady from '@wordpress/dom-ready';
 import { createRoot } from '@wordpress/element';
 
-import Summary from './shared/summary';
-import './shared/composer.scss';
+import Summary from './summary';
+import './styles/composer.scss';
 
 domReady( () => {
 	const root = document.getElementById( 'orbitwrite-dashboard' );

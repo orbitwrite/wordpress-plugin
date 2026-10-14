@@ -117,3 +117,21 @@ export const isNotConnected = ( error: unknown ): boolean =>
  */
 export const messageOf = ( error: unknown ): string =>
 	String( ( error as { message?: string } | null )?.message ?? error );
+
+/**
+ * A rejection handler that tells a lost connection apart from any other
+ * failure.
+ *
+ * @param onDisconnected Called with the error when the user has to (re)connect.
+ * @param onError        Called with the words of any other error.
+ * @return Handler, for `.catch()`.
+ */
+export const handleError =
+	(
+		onDisconnected: ( error: unknown ) => void,
+		onError: ( message: string ) => void
+	) =>
+	( error: unknown ): void =>
+		isNotConnected( error )
+			? onDisconnected( error )
+			: onError( messageOf( error ) );

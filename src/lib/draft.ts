@@ -1,5 +1,5 @@
 /**
- * What the composer keeps in the browser.
+ * What the composer keeps in the browser. Pure; stored by useStored().
  *
  * - **The unsent draft**, per article: the text, the image, the per-channel
  *   versions and a picked time. The block editor unmounts a sidebar when
@@ -11,13 +11,7 @@
  * Keys carry a scope from the server (site and user), because a browser's
  * storage is shared by every site on a domain (subdirectory multisite) and
  * every WordPress user on the machine.
- *
- * Per-viewer convenience only: storage can be unavailable (private windows,
- * blocked site data), so every read and write is allowed to fail and the
- * composer works the same without it.
  */
-import { useCallback, useEffect, useState } from '@wordpress/element';
-
 import type { Image, Versions } from './types';
 
 /** An unsent post. */
@@ -87,70 +81,4 @@ export function worthKeeping( draft: Draft ): boolean {
 		Object.keys( draft.versions ).length > 0 ||
 		draft.at !== ''
 	);
-}
-
-function load< T extends object >( key: string, empty: T ): T {
-	try {
-		const stored: unknown = JSON.parse(
-			window.localStorage.getItem( key ) ?? 'null'
-		);
-		return stored && typeof stored === 'object'
-			? { ...empty, ...stored }
-			: empty;
-	} catch ( e ) {
-		return empty;
-	}
-}
-
-function save< T >( key: string, value: T, keep: ( value: T ) => boolean ) {
-	try {
-		if ( keep( value ) ) {
-			window.localStorage.setItem( key, JSON.stringify( value ) );
-		} else {
-			window.localStorage.removeItem( key );
-		}
-	} catch ( e ) {
-		// Storage unavailable: it just won't outlive the page.
-	}
-}
-
-const always = () => true;
-
-/**
- * A value kept in localStorage under a fixed key.
- *
- * @param key
- * @param empty Its starting value.
- * @param keep  Whether a value is worth storing; else removed.
- * @return The value, `update( changes )` (an object, or a function of the
- *   value), and `clear()`.
- */
-export default function useStored< T extends object >(
-	key: string,
-	empty: T,
-	keep: ( value: T ) => boolean = always
-): [
-	T,
-	( changes: Partial< T > | ( ( current: T ) => Partial< T > ) ) => void,
-	() => void,
-] {
-	const [ value, setValue ] = useState( () => load( key, empty ) );
-
-	useEffect( () => {
-		save( key, value, keep );
-	}, [ key, value ] ); // eslint-disable-line react-hooks/exhaustive-deps
-
-	const update = useCallback(
-		( changes: Partial< T > | ( ( current: T ) => Partial< T > ) ) =>
-			setValue( ( current ) => ( {
-				...current,
-				...( typeof changes === 'function'
-					? changes( current )
-					: changes ),
-			} ) ),
-		[]
-	);
-	const clear = useCallback( () => setValue( empty ), [ empty ] );
-
-	return [ value, update, clear ];
 }

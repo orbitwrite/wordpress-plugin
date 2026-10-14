@@ -4,8 +4,8 @@
 import domReady from '@wordpress/dom-ready';
 import { createRoot } from '@wordpress/element';
 
-import AutoShareSettings from './shared/auto-share-settings';
-import './shared/composer.scss';
+import AutoShareSettings from './auto-share-settings';
+import './styles/composer.scss';
 
 domReady( () => {
 	const root = document.getElementById( 'orbitwrite-auto-share' );

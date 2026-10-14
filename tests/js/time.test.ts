@@ -4,7 +4,7 @@ import {
 	formatWallClock,
 	safeZone,
 	wallClockIn,
-} from '../../src/shared/time';
+} from '../../src/lib/time';
 
 describe( 'time', () => {
 	it( 'reads the wall clock in the workspace zone', () => {

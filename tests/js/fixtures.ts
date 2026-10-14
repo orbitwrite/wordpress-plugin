@@ -7,7 +7,7 @@ import type {
 	Image,
 	MediaRules,
 	Share,
-} from '../../src/shared/types';
+} from '../../src/lib/types';
 
 export const media = ( fields: Partial< MediaRules > = {} ): MediaRules => ( {
 	required: false,

@@ -3,7 +3,7 @@ import {
 	countFor,
 	graphemeCount,
 	limitFor,
-} from '../../src/shared/text';
+} from '../../src/lib/text';
 
 describe( 'countFor', () => {
 	it( 'counts every link on X as 23 characters', () => {

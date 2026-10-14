@@ -11,7 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Width ÷ height checks, in the words people use for them ("4:5"). Pure, and
- * the same rule the composer applies in src/shared/rules.js.
+ * the same rule the composer applies in src/lib/rules.ts.
  */
 final class Aspect {
 

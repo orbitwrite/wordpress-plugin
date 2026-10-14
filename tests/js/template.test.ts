@@ -2,7 +2,7 @@
  * The cases from tests/php/TemplateTest.php: the preview fills a template in
  * exactly as the share does.
  */
-import { renderTemplate, unknownTags } from '../../src/shared/template';
+import { renderTemplate, unknownTags } from '../../src/lib/template';
 
 const values = {
 	title: 'Hello world',
