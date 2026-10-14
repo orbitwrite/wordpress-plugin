@@ -6,13 +6,15 @@
  */
 import { __, _n, sprintf } from '@wordpress/i18n';
 
+import type { Totals } from './types';
+
 /**
  * A count with the reader's digit grouping: 1,204.
  *
- * @param {number} value
- * @return {string} Formatted.
+ * @param value
+ * @return Formatted.
  */
-export function formatCount( value ) {
+export function formatCount( value: number ): string {
 	return new Intl.NumberFormat( undefined, {
 		maximumFractionDigits: 0,
 	} ).format( value );
@@ -22,10 +24,12 @@ export function formatCount( value ) {
  * A change against the period before: "+12%", "−3%", "No change". Null when
  * there's nothing to compare with.
  *
- * @param {number|null} percent
- * @return {string|null} Formatted.
+ * @param percent
+ * @return Formatted.
  */
-export function formatChange( percent ) {
+export function formatChange(
+	percent: number | null | undefined
+): string | null {
 	if ( percent === null || percent === undefined || ! isFinite( percent ) ) {
 		return null;
 	}
@@ -43,49 +47,52 @@ export function formatChange( percent ) {
 const POST_METRICS = [
 	[
 		'impressions',
-		( n ) =>
+		( n: number ) =>
 			/* translators: %s: number. */
 			_n( '%s impression', '%s impressions', n, 'orbitwrite' ),
 	],
 	[
 		'reactions',
-		( n ) =>
+		( n: number ) =>
 			/* translators: %s: number. */
 			_n( '%s reaction', '%s reactions', n, 'orbitwrite' ),
 	],
 	[
 		'comments',
-		( n ) =>
+		( n: number ) =>
 			/* translators: %s: number. */
 			_n( '%s comment', '%s comments', n, 'orbitwrite' ),
 	],
 	[
 		'reposts',
-		( n ) =>
+		( n: number ) =>
 			/* translators: %s: number. */
 			_n( '%s repost', '%s reposts', n, 'orbitwrite' ),
 	],
 	[
 		'clicks',
-		( n ) =>
+		( n: number ) =>
 			/* translators: %s: number. */
 			_n( '%s link click', '%s link clicks', n, 'orbitwrite' ),
 	],
-];
+] as const;
 
 /**
  * A post's numbers as phrases, leaving out what nothing reported.
  *
- * @param {Object|null|undefined} totals `{ impressions, reactions, … }`.
- * @return {string[]} e.g. `[ '1,204 impressions', '38 reactions' ]`.
+ * @param totals `{ impressions, reactions, … }`.
+ * @return e.g. `[ '1,204 impressions', '38 reactions' ]`.
  */
-export function numberPhrases( totals ) {
+export function numberPhrases( totals: Totals | null | undefined ): string[] {
 	if ( ! totals ) {
 		return [];
 	}
-	return POST_METRICS.filter(
-		( [ key ] ) => typeof totals[ key ] === 'number'
-	).map( ( [ key, words ] ) =>
-		sprintf( words( totals[ key ] ), formatCount( totals[ key ] ) )
-	);
+	const phrases: string[] = [];
+	for ( const [ key, words ] of POST_METRICS ) {
+		const value = totals[ key ];
+		if ( typeof value === 'number' ) {
+			phrases.push( sprintf( words( value ), formatCount( value ) ) );
+		}
+	}
+	return phrases;
 }

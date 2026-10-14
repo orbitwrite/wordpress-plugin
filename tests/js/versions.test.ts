@@ -8,10 +8,11 @@ import {
 	mainPostInUse,
 	sendPayload,
 } from '../../src/shared/versions';
+import { image } from './fixtures';
 
 const main = {
 	text: 'New post https://example.com/a',
-	image: { id: 7, url: 'a.png', alt: 'Banner' },
+	image: image( { id: 7, url: 'a.png', alt: 'Banner' } ),
 };
 
 describe( 'channel versions', () => {

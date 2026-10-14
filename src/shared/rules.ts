@@ -10,6 +10,7 @@
 import { __, sprintf } from '@wordpress/i18n';
 
 import { countFor, limitFor } from './text';
+import type { AspectRange, Channel, Content } from './types';
 
 /** Slack for rounding in stored dimensions, as in class-aspect.php. */
 const ASPECT_TOLERANCE = 0.01;
@@ -18,30 +19,30 @@ const ASPECT_TOLERANCE = 0.01;
  * A network that needs media but takes no images only takes video, which
  * the plugin can't attach.
  *
- * @param {Object} channel
- * @return {boolean} Whether.
+ * @param channel
+ * @return Whether.
  */
-export function isVideoOnly( channel ) {
+export function isVideoOnly( channel: Channel ): boolean {
 	return !! channel.media?.required && ! channel.media?.images;
 }
 
 /**
  * Whether a channel can be picked at all.
  *
- * @param {Object} channel
- * @return {boolean} Whether.
+ * @param channel
+ * @return Whether.
  */
-export function isPostable( channel ) {
+export function isPostable( channel: Channel ): boolean {
 	return ! channel.needsReconnect && ! isVideoOnly( channel );
 }
 
 /**
  * Why a channel can't be picked, or undefined.
  *
- * @param {Object} channel
- * @return {string|undefined} Reason.
+ * @param channel
+ * @return Reason.
  */
-export function unavailableReason( channel ) {
+export function unavailableReason( channel: Channel ): string | undefined {
 	if ( channel.needsReconnect ) {
 		return __(
 			'Reconnect this channel in Orbitwrite to post to it.',
@@ -60,11 +61,14 @@ export function unavailableReason( channel ) {
 /**
  * Where a channel stands against its network's text limit.
  *
- * @param {Object} channel
- * @param {Object} content `{ text, image }`.
- * @return {{count: number, limit: number|null, over: boolean}} Count.
+ * @param channel
+ * @param content
+ * @return Count.
  */
-export function measure( channel, content ) {
+export function measure(
+	channel: Channel,
+	content: Content
+): { count: number; limit: number | null; over: boolean } {
 	const limit = limitFor( channel, !! content.image );
 	const count = countFor( content.text, channel );
 	return { count, limit, over: !! limit && count > limit };
@@ -73,10 +77,10 @@ export function measure( channel, content ) {
 /**
  * A ratio as people write it: 0.8 → "4:5", 1.91 → "1.91:1".
  *
- * @param {number} ratio Width ÷ height.
- * @return {string} Label.
+ * @param ratio Width ÷ height.
+ * @return Label.
  */
-export function aspectLabel( ratio ) {
+export function aspectLabel( ratio: number ): string {
 	for ( const height of [ 1, 2, 3, 4, 5, 9, 16 ] ) {
 		const width = ratio * height;
 		if (
@@ -92,12 +96,16 @@ export function aspectLabel( ratio ) {
 /**
  * What's wrong with an image's shape, or null.
  *
- * @param {number}      width
- * @param {number}      height
- * @param {Object|null} range  `{ min, max }`.
- * @return {string|null} Problem.
+ * @param width
+ * @param height
+ * @param range
+ * @return Problem.
  */
-export function aspectProblem( width, height, range ) {
+export function aspectProblem(
+	width: number,
+	height: number,
+	range: Partial< AspectRange > | null | undefined
+): string | null {
 	if ( ! range || ! width || ! height ) {
 		return null;
 	}
@@ -135,11 +143,14 @@ export function aspectProblem( width, height, range ) {
  * the server picks when sending. Only the server can see those copies, so it
  * decides, and says so if there isn't one.
  *
- * @param {Object} channel
- * @param {Object} content `{ image }`, the image `{ mime }`.
- * @return {string[]} Notes.
+ * @param channel
+ * @param content
+ * @return Notes.
  */
-export function channelNotes( channel, content ) {
+export function channelNotes(
+	channel: Channel,
+	content: Pick< Content, 'image' >
+): string[] {
 	const types = channel.media?.imageTypes;
 	if (
 		content.image?.mime &&
@@ -166,10 +177,10 @@ export function channelNotes( channel, content ) {
 /**
  * "image/jpeg" → "JPEG".
  *
- * @param {string} type
- * @return {string} Label.
+ * @param type
+ * @return Label.
  */
-export function typeLabel( type ) {
+export function typeLabel( type: string ): string {
 	return type.replace( /^image\//, '' ).toUpperCase();
 }
 
@@ -177,14 +188,18 @@ export function typeLabel( type ) {
  * Everything stopping a picked channel from taking its content, as
  * sentences. Empty when it's ready.
  *
- * @param {Object}  channel
- * @param {Object}  content    `{ text, image }`, the image `{ mime, width, height }`.
- * @param {boolean} ownVersion Whether the content is the channel's own.
- * @return {string[]} Problems.
+ * @param channel
+ * @param content
+ * @param ownVersion Whether the content is the channel's own.
+ * @return Problems.
  */
-export function channelProblems( channel, content, ownVersion ) {
-	const problems = [];
-	const media = channel.media || {};
+export function channelProblems(
+	channel: Channel,
+	content: Content,
+	ownVersion: boolean
+): string[] {
+	const problems: string[] = [];
+	const media: Partial< Channel[ 'media' ] > = channel.media || {};
 
 	if ( content.text.trim() === '' ) {
 		problems.push(
@@ -194,7 +209,7 @@ export function channelProblems( channel, content, ownVersion ) {
 		);
 	}
 	const { count, limit, over } = measure( channel, content );
-	if ( over ) {
+	if ( over && limit ) {
 		problems.push(
 			sprintf(
 				/* translators: %d: characters over the limit. */

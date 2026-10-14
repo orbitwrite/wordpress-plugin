@@ -40,6 +40,7 @@ import {
 } from '@wordpress/components';
 import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
+import type { ReactNode } from 'react';
 
 import * as api from './api';
 import AutoShareToggle, {
@@ -55,11 +56,21 @@ import {
 	useShares,
 	useWatchOnPublish,
 } from './hooks';
+import type { Connection, Sent } from './hooks';
 import ImageField from './image-field';
 import { channelProblems, isPostable } from './rules';
 import SentList from './sent-list';
 import { articleText } from './text';
 import { defaultScheduleTime, formatInstant, formatWallClock } from './time';
+import type {
+	Article,
+	Channel,
+	Notice as NoticeData,
+	Numbers,
+	Share,
+	Status,
+	When,
+} from './types';
 import useStored, {
 	DEFAULT_PREFS,
 	EMPTY_DRAFT,
@@ -74,13 +85,38 @@ import {
 	sendPayload,
 } from './versions';
 
+/** What the article's posts are, when the block editor holds them above. */
+export interface ArticleState {
+	sent: Sent;
+	numbers: Numbers;
+}
+
+interface ViewProps {
+	/** The article, when there is one. */
+	postId?: number;
+	/** `{ title, link, status, featured }`. */
+	article?: Article | null;
+	/** `{ sent, numbers }`, when held above. */
+	articleState?: ArticleState | null;
+	layout?: 'plain' | 'panels';
+	/** Says a send worked (a snackbar); a notice here otherwise. */
+	notify?: ( ( notice: NoticeData ) => void ) | null;
+	/** Offer the article's auto-share checkbox. */
+	showAutoShare?: boolean;
+	/** Offer Disconnect. */
+	allowDisconnect?: boolean;
+}
+
 /**
  * The composer with its own connection: the classic box and the admin page.
  *
- * @param {Object}   props
- * @param {Function} [props.onStatus] Told the connection whenever it's read.
+ * @param props
+ * @param props.onStatus Told the connection whenever it's read.
  */
-export default function Composer( { onStatus = null, ...props } ) {
+export default function Composer( {
+	onStatus = null,
+	...props
+}: ViewProps & { onStatus?: ( ( status: Status ) => void ) | null } ) {
 	const connection = useConnection();
 	const { status } = connection;
 
@@ -98,15 +134,15 @@ export default function Composer( { onStatus = null, ...props } ) {
  * and the article's posts above the sidebar, so its publish panels and Post
  * tab read the same ones and keep watching while the sidebar is closed.
  *
- * @param {Object}      props
- * @param {Object}      props.connection        From useConnection().
- * @param {number}      [props.postId]          The article, when there is one.
- * @param {Object|null} [props.article]         `{ title, link, status, featured }`.
- * @param {Object|null} [props.articleState]    `{ sent, numbers }`, when held above.
- * @param {string}      [props.layout]          `plain` or `panels`.
- * @param {Function}    [props.notify]          Says a send worked (a snackbar); a notice here otherwise.
- * @param {boolean}     [props.showAutoShare]   Offer the article's auto-share checkbox.
- * @param {boolean}     [props.allowDisconnect] Offer Disconnect.
+ * @param props
+ * @param props.connection      From useConnection().
+ * @param props.postId
+ * @param props.article
+ * @param props.articleState
+ * @param props.layout
+ * @param props.notify
+ * @param props.showAutoShare
+ * @param props.allowDisconnect
  */
 export function ComposerView( {
 	connection,
@@ -117,7 +153,7 @@ export function ComposerView( {
 	notify = null,
 	showAutoShare = true,
 	allowDisconnect = true,
-} ) {
+}: ViewProps & { connection: Connection } ) {
 	const {
 		status,
 		error: statusError,
@@ -220,14 +256,26 @@ export function ComposerView( {
  * A part of the composer: a collapsible panel in the block editor sidebar,
  * a plain block elsewhere.
  *
- * @param {Object}  props
- * @param {boolean} props.panels        Whether the composer is laid out as panels.
- * @param {string}  props.title         The panel's title.
- * @param {boolean} [props.initialOpen]
- * @param {string}  [props.className]
- * @param {*}       props.children
+ * @param props
+ * @param props.panels      Whether the composer is laid out as panels.
+ * @param props.title       The panel's title.
+ * @param props.initialOpen
+ * @param props.className
+ * @param props.children
  */
-function Section( { panels, title, initialOpen = true, className, children } ) {
+function Section( {
+	panels,
+	title,
+	initialOpen = true,
+	className,
+	children,
+}: {
+	panels: boolean;
+	title: string;
+	initialOpen?: boolean;
+	className?: string;
+	children: ReactNode;
+} ) {
 	if ( ! panels ) {
 		return <div className={ className }>{ children }</div>;
 	}
@@ -245,19 +293,19 @@ function Section( { panels, title, initialOpen = true, className, children } ) {
 /**
  * The composer once connected.
  *
- * @param {Object}      props
- * @param {string}      props.scope           Site, person and workspace.
- * @param {number}      props.postId
- * @param {Object|null} props.article
- * @param {Object}      props.status          From the status route.
- * @param {*}           props.noticeView      The notice to show, if any.
- * @param {Function}    props.setNotice
- * @param {Function}    props.reload          Re-read the connection.
- * @param {Object|null} props.articleState    `{ sent, numbers }`, when held above.
- * @param {string}      props.layout          `plain` or `panels`.
- * @param {Function}    props.notify          Says a send worked, or null.
- * @param {boolean}     props.showAutoShare
- * @param {boolean}     props.allowDisconnect
+ * @param props
+ * @param props.scope           Site, person and workspace.
+ * @param props.status          From the status route.
+ * @param props.noticeView      The notice to show, if any.
+ * @param props.setNotice
+ * @param props.reload          Re-read the connection.
+ * @param props.postId
+ * @param props.article
+ * @param props.articleState
+ * @param props.layout
+ * @param props.notify
+ * @param props.showAutoShare
+ * @param props.allowDisconnect
  */
 function Editing( {
 	scope,
@@ -272,11 +320,17 @@ function Editing( {
 	notify,
 	showAutoShare,
 	allowDisconnect,
+}: Required< ViewProps > & {
+	scope: string;
+	status: Status;
+	noticeView: ReactNode;
+	setNotice: Connection[ 'setNotice' ];
+	reload: Connection[ 'reload' ];
 } ) {
 	const panels = layout === 'panels';
 	const onDisconnected = useCallback(
-		( err ) => {
-			setNotice( { type: 'warning', message: err.message } );
+		( err: unknown ) => {
+			setNotice( { type: 'warning', message: api.messageOf( err ) } );
 			reload();
 		},
 		[ setNotice, reload ]
@@ -310,7 +364,7 @@ function Editing( {
 		DEFAULT_PREFS
 	);
 	const [ sending, setSending ] = useState( false );
-	const [ error, setError ] = useState( null );
+	const [ error, setError ] = useState< string | null >( null );
 
 	// --- Following the article until the person edits ----------------------
 
@@ -378,7 +432,7 @@ function Editing( {
 	);
 	const selectedIds = selectedChannels.map( ( channel ) => channel.id );
 
-	const onSelect = ( id, checked ) =>
+	const onSelect = ( id: string, checked: boolean ) =>
 		updatePrefs( {
 			selected: checked
 				? [ ...picked.filter( ( other ) => other !== id ), id ]
@@ -402,13 +456,13 @@ function Editing( {
 	// "Now" is never remembered: a preference that publishes on the next
 	// click, on whatever article is open, is too easy to trip over.
 	const [ publishNow, setPublishNow ] = useState( false );
-	const when = publishNow ? 'now' : prefs.when;
+	const when: When = publishNow ? 'now' : prefs.when;
 	const nextSlot = useNextSlot( when === 'next', selectedIds );
 	// A picked time is the article's; until one is picked, offer tomorrow
 	// morning without storing it.
 	const at =
 		draft.at || ( when === 'at' ? defaultScheduleTime( timezone ) : '' );
-	const chooseWhen = ( next ) => {
+	const chooseWhen = ( next: When ) => {
 		setPublishNow( next === 'now' );
 		if ( next !== 'now' ) {
 			updatePrefs( { when: next } );
@@ -471,9 +525,9 @@ function Editing( {
 					: sprintf(
 							/* translators: %s: date and time. */
 							__( 'Scheduled for %s.', 'orbitwrite' ),
-							formatInstant( first.scheduledAt, timezone )
+							formatInstant( first.scheduledAt ?? '', timezone )
 					  );
-				const said = {
+				const said: NoticeData = {
 					type: 'success',
 					message:
 						shares.length > 1
@@ -504,12 +558,12 @@ function Editing( {
 			.catch( ( err ) =>
 				api.isNotConnected( err )
 					? onDisconnected( err )
-					: setError( err.message )
+					: setError( api.messageOf( err ) )
 			)
 			.finally( () => setSending( false ) );
 	};
 
-	const onDelete = ( share ) => {
+	const onDelete = ( share: Share ) => {
 		if (
 			// eslint-disable-next-line no-alert
 			! window.confirm(
@@ -523,7 +577,7 @@ function Editing( {
 		}
 		api.discard( postId, share.groupId )
 			.then( () => sent.remove( share.groupId ) )
-			.catch( ( err ) => setError( err.message ) );
+			.catch( ( err ) => setError( api.messageOf( err ) ) );
 	};
 
 	const onStartOver = () => {
@@ -545,7 +599,7 @@ function Editing( {
 	const onDisconnect = () => api.disconnect().then( reload );
 
 	const autoShareOn =
-		postId > 0 && autoSharePending( sent ) && sent.autoShare.enabled;
+		postId > 0 && autoSharePending( sent ) && !! sent.autoShare?.enabled;
 
 	// --- Render -------------------------------------------------------------
 
@@ -666,7 +720,7 @@ function Editing( {
 					label={ __( 'When', 'orbitwrite' ) }
 					hideLabelFromVision={ panels }
 					value={ when }
-					onChange={ chooseWhen }
+					onChange={ ( next ) => chooseWhen( next as When ) }
 				>
 					<ToggleGroupControlOption
 						value="next"
@@ -801,12 +855,16 @@ function Editing( {
 /**
  * The line under the main post saying who it's for.
  *
- * @param {Object[]} selectedChannels
- * @param {Object[]} mainUsers        Selected channels using the main post.
- * @param {boolean}  usesMain
- * @return {string|undefined} Help text.
+ * @param selectedChannels
+ * @param mainUsers        Selected channels using the main post.
+ * @param usesMain
+ * @return Help text.
  */
-function mainPostHelp( selectedChannels, mainUsers, usesMain ) {
+function mainPostHelp(
+	selectedChannels: Channel[],
+	mainUsers: Channel[],
+	usesMain: boolean
+): string | undefined {
 	if ( ! selectedChannels.length ) {
 		return undefined;
 	}

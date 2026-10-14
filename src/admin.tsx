@@ -9,6 +9,7 @@ import { __ } from '@wordpress/i18n';
 
 import Composer from './shared/composer';
 import Summary from './shared/summary';
+import type { Status } from './shared/types';
 import './shared/composer.scss';
 
 /**
@@ -17,7 +18,7 @@ import './shared/composer.scss';
  * the person disconnects.
  */
 function Page() {
-	const [ status, setStatus ] = useState( null );
+	const [ status, setStatus ] = useState< Status | null >( null );
 	const connected = Boolean( status?.connected );
 	return (
 		<div
@@ -38,7 +39,7 @@ function Page() {
 				</CardBody>
 			</Card>
 			{ connected && (
-				<Summary key={ status.organization?.id || 'workspace' } />
+				<Summary key={ status?.organization?.id || 'workspace' } />
 			) }
 		</div>
 	);

@@ -1,24 +1,21 @@
 /**
  * What was sent to Orbitwrite from this article.
  */
-import {
-	DropdownMenu,
-	ExternalLink,
-	MenuGroup,
-	MenuItem,
-} from '@wordpress/components';
+import { DropdownMenu, ExternalLink, MenuGroup } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 import { numberPhrases } from './numbers';
 import { formatInstant } from './time';
+import type { Channel, Numbers, Share, Totals } from './types';
+import { MenuItem } from './wp-components';
 
 /**
  * A share's state in words.
  *
- * @param {Object} share
- * @return {string} Label.
+ * @param share
+ * @return Label.
  */
-export function statusLabel( share ) {
+export function statusLabel( share: Share ): string {
 	if (
 		share.bucket === 'needs_approval' ||
 		share.status === 'pending_approval'
@@ -47,10 +44,10 @@ export function statusLabel( share ) {
 /**
  * A published post's numbers, or a line saying they're on their way.
  *
- * @param {Object|undefined} totals Undefined until read.
- * @return {string|null} Line.
+ * @param totals Undefined until read.
+ * @return Line.
  */
-export function numbersLine( totals ) {
+export function numbersLine( totals: Totals | undefined ): string | null {
 	if ( totals === undefined ) {
 		return null;
 	}
@@ -63,6 +60,15 @@ export function numbersLine( totals ) {
 		  );
 }
 
+interface Props {
+	shares: Share[];
+	numbers?: Numbers;
+	channels: Channel[];
+	timezone: string;
+	onDelete: ( share: Share ) => void;
+	showLabel?: boolean;
+}
+
 export default function SentList( {
 	shares,
 	numbers = {},
@@ -70,8 +76,8 @@ export default function SentList( {
 	timezone,
 	onDelete,
 	showLabel = true,
-} ) {
-	const nameOf = ( id ) => {
+}: Props ) {
+	const nameOf = ( id: string ) => {
 		const channel = channels.find( ( item ) => item.id === id );
 		return channel
 			? channel.displayName || channel.handle || channel.platformName

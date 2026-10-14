@@ -15,13 +15,15 @@ import {
 } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
+import type { ReactNode } from 'react';
 
 import * as api from './api';
 import { formatChange, formatCount } from './numbers';
 import { formatInstant } from './time';
+import type { AnalyticsAnswer } from './types';
 
 /** The totals shown, in order. */
-const TILES = [
+const TILES: Array< [ string, () => string ] > = [
 	[ 'impressions', () => __( 'Impressions', 'orbitwrite' ) ],
 	[ 'engagements', () => __( 'Engagements', 'orbitwrite' ) ],
 	[ 'clicks', () => __( 'Link clicks', 'orbitwrite' ) ],
@@ -30,10 +32,12 @@ const TILES = [
 /**
  * Which way a change went, for its colour.
  *
- * @param {number|null|undefined} percent
- * @return {string} `up`, `down` or `flat`.
+ * @param percent
+ * @return `up`, `down` or `flat`.
  */
-function direction( percent ) {
+function direction(
+	percent: number | null | undefined
+): 'up' | 'down' | 'flat' {
 	const rounded = Math.round( percent || 0 );
 	if ( rounded > 0 ) {
 		return 'up';
@@ -41,7 +45,17 @@ function direction( percent ) {
 	return rounded < 0 ? 'down' : 'flat';
 }
 
-function Tile( { label, value, percent, note } ) {
+function Tile( {
+	label,
+	value,
+	percent,
+	note,
+}: {
+	label: string;
+	value: number | null | undefined;
+	percent?: number | null;
+	note?: string | null;
+} ) {
 	const change = formatChange( percent );
 	return (
 		<div className="orbitwrite-summary__tile">
@@ -81,12 +95,20 @@ function Tile( { label, value, percent, note } ) {
  * The frame: a card on the Orbitwrite page, bare inside a dashboard widget,
  * which brings its own title and box.
  *
- * @param {Object}  props
- * @param {boolean} props.widget
- * @param {*}       props.heading  The card's header.
- * @param {*}       props.children
+ * @param props
+ * @param props.widget
+ * @param props.heading  The card's header.
+ * @param props.children
  */
-function Frame( { widget, heading, children } ) {
+function Frame( {
+	widget,
+	heading,
+	children,
+}: {
+	widget: boolean;
+	heading: ReactNode;
+	children: ReactNode;
+} ) {
 	if ( widget ) {
 		return <div className="orbitwrite-summary is-widget">{ children }</div>;
 	}
@@ -99,11 +121,15 @@ function Frame( { widget, heading, children } ) {
 }
 
 /**
- * @param {Object}  props
- * @param {boolean} [props.widget] Laid out for a dashboard widget.
+ * @param props
+ * @param props.widget Laid out for a dashboard widget.
  */
-export default function Summary( { widget = false } ) {
-	const [ state, setState ] = useState( { loading: true } );
+export default function Summary( { widget = false }: { widget?: boolean } ) {
+	const [ state, setState ] = useState<
+		| { loading: true; summary?: never; error?: never }
+		| { summary: AnalyticsAnswer; loading?: never; error?: never }
+		| { error: unknown; loading?: never; summary?: never }
+	>( { loading: true } );
 
 	useEffect( () => {
 		api.getAnalytics()
@@ -130,7 +156,7 @@ export default function Summary( { widget = false } ) {
 		);
 	}
 	// Not connected: the composer below offers to connect.
-	if ( state.error ) {
+	if ( ! state.summary ) {
 		return api.isNotConnected( state.error ) ? null : (
 			<Frame widget={ widget } heading={ heading }>
 				<p className="orbitwrite-summary__muted">
@@ -140,7 +166,7 @@ export default function Summary( { widget = false } ) {
 							"Couldn't load the last four weeks: %s",
 							'orbitwrite'
 						),
-						state.error.message
+						api.messageOf( state.error )
 					) }
 				</p>
 			</Frame>
@@ -168,13 +194,13 @@ export default function Summary( { widget = false } ) {
 					}
 				/>
 				{ TILES.map( ( [ key, label ] ) => {
-					const metric = overview.metrics[ key ] || {};
+					const metric = overview.metrics[ key ];
 					return (
 						<Tile
 							key={ key }
 							label={ label() }
-							value={ metric.value }
-							percent={ metric.changePercent }
+							value={ metric?.value }
+							percent={ metric?.changePercent }
 						/>
 					);
 				} ) }

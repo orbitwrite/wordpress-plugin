@@ -8,7 +8,6 @@
  */
 import {
 	Button,
-	CheckboxControl,
 	Notice,
 	RadioControl,
 	Spinner,
@@ -22,9 +21,15 @@ import * as api from './api';
 import { ChannelLabel } from './channel-list';
 import { isPostable, unavailableReason } from './rules';
 import { renderTemplate, unknownTags } from './template';
+import type {
+	AutoShareAnswer,
+	AutoShareSettings as Settings,
+	Channel,
+} from './types';
+import { CheckboxControl } from './wp-components';
 
 /** What each template tag stands for. */
-const TAG_HELP = {
+const TAG_HELP: Record< string, () => string > = {
 	title: () => __( "the article's title", 'orbitwrite' ),
 	url: () => __( 'its link', 'orbitwrite' ),
 	excerpt: () =>
@@ -34,14 +39,17 @@ const TAG_HELP = {
 };
 
 export default function AutoShareSettings() {
-	const [ loaded, setLoaded ] = useState( null );
-	const [ channels, setChannels ] = useState( null );
-	const [ form, setForm ] = useState( null );
-	const [ loadError, setLoadError ] = useState( null );
+	const [ loaded, setLoaded ] = useState< AutoShareAnswer | null >( null );
+	const [ channels, setChannels ] = useState< Channel[] | null >( null );
+	const [ form, setForm ] = useState< Settings | null >( null );
+	const [ loadError, setLoadError ] = useState< string | null >( null );
 	const [ notConnected, setNotConnected ] = useState( false );
 	const [ saving, setSaving ] = useState( false );
-	const [ notice, setNotice ] = useState( null );
-	const textField = useRef( null );
+	const [ notice, setNotice ] = useState< {
+		status: 'success' | 'error';
+		message: string;
+	} | null >( null );
+	const textField = useRef< HTMLDivElement >( null );
 
 	useEffect( () => {
 		Promise.all( [ api.getAutoShare(), api.getChannels() ] )
@@ -53,7 +61,7 @@ export default function AutoShareSettings() {
 			.catch( ( err ) =>
 				api.isNotConnected( err )
 					? setNotConnected( true )
-					: setLoadError( err.message )
+					: setLoadError( api.messageOf( err ) )
 			);
 	}, [] );
 
@@ -74,15 +82,15 @@ export default function AutoShareSettings() {
 			</Notice>
 		);
 	}
-	if ( ! form || ! channels ) {
+	if ( ! loaded || ! form || ! channels ) {
 		return <Spinner />;
 	}
 
-	const update = ( fields ) => {
+	const update = ( fields: Partial< Settings > ) => {
 		setNotice( null );
-		setForm( ( current ) => ( { ...current, ...fields } ) );
+		setForm( ( current ) => current && { ...current, ...fields } );
 	};
-	const toggleIn = ( list, value, on ) =>
+	const toggleIn = ( list: string[], value: string, on: boolean ) =>
 		on
 			? [ ...list.filter( ( item ) => item !== value ), value ]
 			: list.filter( ( item ) => item !== value );
@@ -95,7 +103,7 @@ export default function AutoShareSettings() {
 	const unknown = unknownTags( form.template );
 
 	// A tag goes where the cursor is, and the cursor after it.
-	const insertTag = ( tag ) => {
+	const insertTag = ( tag: string ) => {
 		const token = `{${ tag }}`;
 		const field = textField.current?.querySelector( 'textarea' );
 		const start = field ? field.selectionStart : form.template.length;
@@ -123,10 +131,10 @@ export default function AutoShareSettings() {
 		api.saveAutoShare( { ...form, accountIds: known } )
 			.then( ( answer ) => {
 				setForm( answer.settings );
-				setLoaded( ( current ) => ( {
-					...current,
-					otherWorkspace: false,
-				} ) );
+				setLoaded(
+					( current ) =>
+						current && { ...current, otherWorkspace: false }
+				);
 				setNotice( {
 					status: 'success',
 					message: answer.settings.enabled
@@ -138,7 +146,7 @@ export default function AutoShareSettings() {
 				} );
 			} )
 			.catch( ( err ) =>
-				setNotice( { status: 'error', message: err.message } )
+				setNotice( { status: 'error', message: api.messageOf( err ) } )
 			)
 			.finally( () => setSaving( false ) );
 	};
@@ -335,7 +343,9 @@ export default function AutoShareSettings() {
 					<RadioControl
 						label={ __( 'When', 'orbitwrite' ) }
 						selected={ form.when }
-						onChange={ ( when ) => update( { when } ) }
+						onChange={ ( when ) =>
+							update( { when: when as Settings[ 'when' ] } )
+						}
 						options={ [
 							{
 								label: __( 'Next free slot', 'orbitwrite' ),

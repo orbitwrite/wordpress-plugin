@@ -37,7 +37,9 @@ describe( 'limitFor', () => {
 	} );
 
 	it( 'is null when the limit is unknown', () => {
-		expect( limitFor( { maxChars: null }, false ) ).toBeNull();
+		expect(
+			limitFor( { maxChars: null, withMediaMaxChars: null }, false )
+		).toBeNull();
 	} );
 } );
 

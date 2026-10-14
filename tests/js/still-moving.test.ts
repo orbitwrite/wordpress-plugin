@@ -1,7 +1,8 @@
 import { stillMoving } from '../../src/shared/still-moving';
+import { autoShare, share as makeShare } from './fixtures';
 
 describe( 'stillMoving', () => {
-	const share = ( status ) => ( { groupId: 'grp_1', status } );
+	const share = ( status: string ) => makeShare( { status } );
 
 	it( 'keeps looking while a post is publishing or auto-share has the article', () => {
 		expect(
@@ -11,7 +12,10 @@ describe( 'stillMoving', () => {
 			} )
 		).toBe( true );
 		expect(
-			stillMoving( { shares: [], autoShare: { state: 'queued' } } )
+			stillMoving( {
+				shares: [],
+				autoShare: autoShare( { state: 'queued' } ),
+			} )
 		).toBe( true );
 		expect(
 			stillMoving( { shares: [ share( 'scheduled' ) ], autoShare: null } )
@@ -21,7 +25,7 @@ describe( 'stillMoving', () => {
 	it( 'waits for a pending auto-share only right after the editor publishes', () => {
 		const answer = {
 			shares: [],
-			autoShare: { pending: true, enabled: true, state: null },
+			autoShare: autoShare( { pending: true, enabled: true } ),
 		};
 		expect( stillMoving( answer ) ).toBe( false );
 		expect( stillMoving( answer, true ) ).toBe( true );

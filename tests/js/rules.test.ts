@@ -13,34 +13,28 @@ import {
 	worthKeeping,
 } from '../../src/shared/use-draft';
 
-const media = ( fields = {} ) => ( {
-	required: false,
-	images: true,
-	imageMaxBytes: 5000000,
-	aspectRatio: null,
-	...fields,
-} );
+import { channel, image, media } from './fixtures';
 
-const x = { platform: 'twitter', maxChars: 280, unit: 'chars', media: media() };
-const instagram = {
+const x = channel( { platform: 'twitter', maxChars: 280 } );
+const instagram = channel( {
 	platform: 'instagram',
 	maxChars: 2200,
 	unit: 'chars',
 	media: media( { required: true, aspectRatio: { min: 0.8, max: 1.91 } } ),
-};
-const tiktok = {
+} );
+const tiktok = channel( {
 	platform: 'tiktok',
 	maxChars: 2200,
 	media: media( { required: true, images: false, imageMaxBytes: null } ),
-};
-const textOnly = {
+} );
+const textOnly = channel( {
 	platform: 'textonly',
 	maxChars: 500,
 	media: media( { images: false } ),
-};
+} );
 
-const wide = { id: 7, url: 'a.png', alt: '', width: 1200, height: 630 };
-const tall = { id: 8, url: 'b.png', alt: '', width: 1080, height: 1920 };
+const wide = image( { id: 7, url: 'a.png', width: 1200, height: 630 } );
+const tall = image( { id: 8, url: 'b.png', width: 1080, height: 1920 } );
 
 describe( 'channel rules', () => {
 	it( 'has nothing to say about content that fits', () => {
@@ -132,13 +126,13 @@ describe( 'draft storage', () => {
 } );
 
 describe( 'image types', () => {
-	const linkedin = {
+	const linkedin = channel( {
 		platform: 'linkedin_personal',
 		maxChars: 3000,
 		media: media( {
 			imageTypes: [ 'image/jpeg', 'image/png', 'image/gif' ],
 		} ),
-	};
+	} );
 	const webp = { ...wide, mime: 'image/webp' };
 
 	it( 'notes an unaccepted type without blocking the send', () => {

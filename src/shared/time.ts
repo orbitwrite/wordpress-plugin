@@ -10,10 +10,10 @@
 /**
  * A zone Intl accepts, or UTC.
  *
- * @param {string} timeZone
- * @return {string} Zone.
+ * @param timeZone
+ * @return Zone.
  */
-export function safeZone( timeZone ) {
+export function safeZone( timeZone: string ): string {
 	try {
 		new Intl.DateTimeFormat( 'en', { timeZone } );
 		return timeZone;
@@ -22,7 +22,7 @@ export function safeZone( timeZone ) {
 	}
 }
 
-const DISPLAY = {
+const DISPLAY: Intl.DateTimeFormatOptions = {
 	weekday: 'short',
 	day: 'numeric',
 	month: 'short',
@@ -33,12 +33,16 @@ const DISPLAY = {
 /**
  * An instant shown in a zone, e.g. "Thu 15 Oct, 09:00".
  *
- * @param {string} iso
- * @param {string} timeZone
- * @param {string} [locale]
- * @return {string} Formatted.
+ * @param iso
+ * @param timeZone
+ * @param locale
+ * @return Formatted.
  */
-export function formatInstant( iso, timeZone, locale ) {
+export function formatInstant(
+	iso: string,
+	timeZone: string,
+	locale?: string
+): string {
 	const date = new Date( iso );
 	if ( Number.isNaN( date.getTime() ) ) {
 		return '';
@@ -53,11 +57,11 @@ export function formatInstant( iso, timeZone, locale ) {
  * A wall-clock time (`YYYY-MM-DDTHH:MM`) shown as-is, e.g. "Thu 15 Oct, 09:00".
  * Formatted as UTC because it is already the zone's own wall clock.
  *
- * @param {string} local
- * @param {string} [locale]
- * @return {string} Formatted.
+ * @param local
+ * @param locale
+ * @return Formatted.
  */
-export function formatWallClock( local, locale ) {
+export function formatWallClock( local: string, locale?: string ): string {
 	const date = new Date( `${ local }:00Z` );
 	if ( Number.isNaN( date.getTime() ) ) {
 		return '';
@@ -71,12 +75,15 @@ export function formatWallClock( local, locale ) {
 /**
  * The wall clock in a zone at an instant, as `YYYY-MM-DDTHH:MM`.
  *
- * @param {string} timeZone
- * @param {Date}   [now]
- * @return {string} Wall-clock time.
+ * @param timeZone
+ * @param now
+ * @return Wall-clock time.
  */
-export function wallClockIn( timeZone, now = new Date() ) {
-	const parts = {};
+export function wallClockIn(
+	timeZone: string,
+	now: Date = new Date()
+): string {
+	const parts: Partial< Record< Intl.DateTimeFormatPartTypes, string > > = {};
 	for ( const part of new Intl.DateTimeFormat( 'en-GB', {
 		timeZone: safeZone( timeZone ),
 		year: 'numeric',
@@ -94,11 +101,14 @@ export function wallClockIn( timeZone, now = new Date() ) {
 /**
  * Tomorrow at 09:00 in a zone: the date-time picker's starting value.
  *
- * @param {string} timeZone
- * @param {Date}   [now]
- * @return {string} Wall-clock time.
+ * @param timeZone
+ * @param now
+ * @return Wall-clock time.
  */
-export function defaultScheduleTime( timeZone, now = new Date() ) {
+export function defaultScheduleTime(
+	timeZone: string,
+	now: Date = new Date()
+): string {
 	const today = wallClockIn( timeZone, now ).slice( 0, 10 );
 	const date = new Date( `${ today }T00:00:00Z` );
 	date.setUTCDate( date.getUTCDate() + 1 );

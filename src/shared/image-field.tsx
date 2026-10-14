@@ -4,15 +4,18 @@
  */
 import { Button, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { MediaUpload } from '@wordpress/media-utils';
 
-/**
- * @param {Object}      props
- * @param {Object|null} props.image    `{ id, url, alt, width, height }`.
- * @param {Function}    props.onChange Called with the new image, or null.
- * @param {string}      [props.label]
- */
-export default function ImageField( { image, onChange, label } ) {
+import type { Image } from './types';
+import { MediaUpload } from './wp-components';
+
+interface Props {
+	image: Image | null;
+	/** Called with the new image, or null. */
+	onChange: ( image: Image | null ) => void;
+	label?: string;
+}
+
+export default function ImageField( { image, onChange, label }: Props ) {
 	return (
 		<div className="orbitwrite-image">
 			{ label && <p className="orbitwrite-composer__label">{ label }</p> }

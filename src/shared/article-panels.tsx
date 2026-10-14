@@ -11,16 +11,24 @@ import AutoShareToggle, {
 	autoSharePending,
 } from './auto-share-toggle';
 import { numbersLine, statusLabel } from './sent-list';
+import type { Connection, Sent } from './hooks';
 import { formatInstant } from './time';
+import type { Numbers } from './types';
 
 /**
  * The article's posts, one line each, with their numbers once published.
  *
- * @param {Object} props
- * @param {Object} props.sent    From useShares().
- * @param {Object} props.numbers From useShareNumbers().
+ * @param props
+ * @param props.sent    From useShares().
+ * @param props.numbers From useShareNumbers().
  */
-export function ShareSummary( { sent, numbers } ) {
+export function ShareSummary( {
+	sent,
+	numbers,
+}: {
+	sent: Sent;
+	numbers: Numbers;
+} ) {
 	if ( ! sent.shares.length ) {
 		return null;
 	}
@@ -69,15 +77,27 @@ export function ShareSummary( { sent, numbers } ) {
  * The Post tab's Orbitwrite panel: auto-share for this article, what was
  * sent, and the way into the composer.
  *
- * @param {Object}   props
- * @param {Object}   props.connection From useConnection().
- * @param {number}   props.postId
- * @param {Object}   props.sent       From useShares().
- * @param {Object}   props.numbers    From useShareNumbers().
- * @param {Function} props.onOpen     Opens the Share on Orbitwrite sidebar.
+ * @param props
+ * @param props.connection From useConnection().
+ * @param props.postId
+ * @param props.sent       From useShares().
+ * @param props.numbers    From useShareNumbers().
+ * @param props.onOpen     Opens the Share on Orbitwrite sidebar.
  */
-export function DocumentPanel( { connection, postId, sent, numbers, onOpen } ) {
-	const [ error, setError ] = useState( null );
+export function DocumentPanel( {
+	connection,
+	postId,
+	sent,
+	numbers,
+	onOpen,
+}: {
+	connection: Connection;
+	postId: number;
+	sent: Sent;
+	numbers: Numbers;
+	onOpen: () => void;
+} ) {
+	const [ error, setError ] = useState< string | null >( null );
 	const status = connection.status;
 
 	if ( ! status ) {
@@ -138,12 +158,21 @@ export function DocumentPanel( { connection, postId, sent, numbers, onOpen } ) {
  * After publishing: what auto-share is doing, what's on its way, or the
  * offer to write a social post now.
  *
- * @param {Object}   props
- * @param {Object}   props.sent    From useShares().
- * @param {Object}   props.numbers From useShareNumbers().
- * @param {Function} props.onOpen  Opens the Share on Orbitwrite sidebar.
+ * @param props
+ * @param props.sent    From useShares().
+ * @param props.numbers From useShareNumbers().
+ * @param props.onOpen  Opens the Share on Orbitwrite sidebar.
  */
-export function AfterPublishPanel( { sent, numbers, onOpen } ) {
+export function AfterPublishPanel( {
+	sent,
+	numbers,
+	onOpen,
+}: {
+	sent: Sent;
+	numbers: Numbers;
+	onOpen: () => void;
+} ) {
+	const state = sent.autoShare?.state;
 	if ( sent.shares.length ) {
 		return (
 			<div className="orbitwrite-panel">
@@ -151,7 +180,7 @@ export function AfterPublishPanel( { sent, numbers, onOpen } ) {
 			</div>
 		);
 	}
-	if ( [ 'queued', 'sending' ].includes( sent.autoShare?.state ) ) {
+	if ( state === 'queued' || state === 'sending' ) {
 		return (
 			<div className="orbitwrite-panel">
 				<AutoShareNotices sent={ sent } />

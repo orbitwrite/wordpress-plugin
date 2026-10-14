@@ -36,13 +36,14 @@ import {
 	useShares,
 	useWatchOnPublish,
 } from './shared/hooks';
+import type { Notice } from './shared/types';
 import './shared/composer.scss';
 
 const SIDEBAR = 'orbitwrite-sidebar';
 
 function Orbitwrite() {
 	const postId = useSelect(
-		( select ) => select( editorStore ).getCurrentPostId(),
+		( select ) => Number( select( editorStore ).getCurrentPostId() ) || 0,
 		[]
 	);
 	const title = useSelect(
@@ -127,7 +128,9 @@ function Orbitwrite() {
 	// open. Only once the editor has put up its own default sidebar (the Post
 	// tab), or it replaces ours a moment later.
 	const sidebarSettled = useSelect( ( select ) => {
-		const ui = select( 'core/interface' );
+		const ui = select( 'core/interface' ) as {
+			isComplementaryAreaLoading?: ( scope: string ) => boolean;
+		};
 		return ! ui.isComplementaryAreaLoading?.( 'core' );
 	}, [] );
 	const openOnLoad = useRef(
@@ -144,7 +147,7 @@ function Orbitwrite() {
 
 	// Confirmations are the editor's own snackbars, like "Post published".
 	const notify = useCallback(
-		( { type, message, openUrl } ) =>
+		( { type, message, openUrl }: Notice ) => {
 			createNotice( type === 'error' ? 'error' : 'success', message, {
 				type: 'snackbar',
 				actions: openUrl
@@ -160,7 +163,8 @@ function Orbitwrite() {
 							},
 					  ]
 					: [],
-			} ),
+			} );
+		},
 		[ createNotice ]
 	);
 	// A notice the connect flow left ("Connected to Acme") is one too.
@@ -172,7 +176,7 @@ function Orbitwrite() {
 		}
 	}, [ notice, notify, setNotice ] );
 
-	const [ toggleError, setToggleError ] = useState( null );
+	const [ toggleError, setToggleError ] = useState< string | null >( null );
 
 	return (
 		<>
@@ -218,7 +222,7 @@ function Orbitwrite() {
 					<AutoShareToggle
 						postId={ postId }
 						sent={ sent }
-						settingsUrl={ connection.status.autoShareUrl }
+						settingsUrl={ connection.status?.autoShareUrl ?? '' }
 						onError={ setToggleError }
 					/>
 					{ toggleError && <p role="alert">{ toggleError }</p> }

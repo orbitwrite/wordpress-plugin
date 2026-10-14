@@ -6,6 +6,41 @@ import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 
 import * as api from './api';
 import { stillMoving } from './still-moving';
+import type {
+	ArticleAutoShare,
+	Channel,
+	Notice,
+	Numbers,
+	Share,
+	SharesAnswer,
+	Status,
+} from './types';
+
+export interface Connection {
+	status: Status | null;
+	error: string | null;
+	notice: Notice | null;
+	setNotice: ( notice: Notice | null ) => void;
+	reload: () => Promise< void >;
+}
+
+export interface NextSlot {
+	loading?: boolean;
+	at?: string;
+	error?: string;
+}
+
+export interface Sent {
+	shares: Share[];
+	autoShare: ArticleAutoShare | null;
+	setAutoShare: ( autoShare: ArticleAutoShare | null ) => void;
+	timezone: string | null;
+	loaded: boolean;
+	add: ( sent: Share[] ) => void;
+	remove: ( groupId: string ) => void;
+	reload: () => Promise< SharesAnswer | null >;
+	watchPublishing: ( justPublished?: boolean, tries?: number ) => void;
+}
 
 /** How often, and how many times, to re-read a post that is publishing. */
 const POLL_MS = 3000;
@@ -14,12 +49,12 @@ const POLL_TRIES = 20;
 /**
  * The user's connection, and a one-shot notice the OAuth flow left.
  *
- * @return {Object} `{ status, error, notice, setNotice, reload }`.
+ * @return `{ status, error, notice, setNotice, reload }`.
  */
-export function useConnection() {
+export function useConnection(): Connection {
 	// The page may carry the first answer (Admin::enqueue_build). It's used
 	// once: a later mount, or a reload, asks again.
-	const [ boot ] = useState( () => {
+	const [ boot ] = useState< Status | null >( () => {
 		const status = window.orbitwriteBoot?.status || null;
 		if ( window.orbitwriteBoot ) {
 			delete window.orbitwriteBoot.status;
@@ -27,8 +62,10 @@ export function useConnection() {
 		return status;
 	} );
 	const [ status, setStatus ] = useState( boot );
-	const [ error, setError ] = useState( null );
-	const [ notice, setNotice ] = useState( boot?.notice || null );
+	const [ error, setError ] = useState< string | null >( null );
+	const [ notice, setNotice ] = useState< Notice | null >(
+		boot?.notice || null
+	);
 
 	const reload = useCallback( () => {
 		setError( null );
@@ -40,7 +77,7 @@ export function useConnection() {
 					setNotice( answer.notice );
 				}
 			} )
-			.catch( ( err ) => setError( err.message ) );
+			.catch( ( err ) => setError( api.messageOf( err ) ) );
 	}, [] );
 
 	useEffect( () => {
@@ -55,14 +92,18 @@ export function useConnection() {
 /**
  * The workspace's channels and timezone. Only used while connected.
  *
- * @param {Function} onDisconnected Called with the error when the connection
- *                                  turns out to be gone.
- * @return {Object} `{ channels, timezone, error }`.
+ * @param onDisconnected Called with the error when the connection turns out
+ *                       to be gone.
+ * @return `{ channels, timezone, error }`.
  */
-export function useChannels( onDisconnected ) {
-	const [ channels, setChannels ] = useState( null );
+export function useChannels( onDisconnected: ( error: unknown ) => void ): {
+	channels: Channel[] | null;
+	timezone: string;
+	error: string | null;
+} {
+	const [ channels, setChannels ] = useState< Channel[] | null >( null );
 	const [ timezone, setTimezone ] = useState( 'UTC' );
-	const [ error, setError ] = useState( null );
+	const [ error, setError ] = useState< string | null >( null );
 
 	useEffect( () => {
 		setError( null );
@@ -74,7 +115,7 @@ export function useChannels( onDisconnected ) {
 			.catch( ( err ) =>
 				api.isNotConnected( err )
 					? onDisconnected( err )
-					: setError( err.message )
+					: setError( api.messageOf( err ) )
 			);
 	}, [ onDisconnected ] );
 
@@ -85,12 +126,12 @@ export function useChannels( onDisconnected ) {
  * The soonest free slot for the picked channels, while "Next free slot" is
  * the choice. Debounced, since ticking several channels is several changes.
  *
- * @param {boolean}  active
- * @param {string[]} accountIds
- * @return {Object} `{ loading, at, error }`.
+ * @param active
+ * @param accountIds
+ * @return `{ loading, at, error }`.
  */
-export function useNextSlot( active, accountIds ) {
-	const [ slot, setSlot ] = useState( { loading: false } );
+export function useNextSlot( active: boolean, accountIds: string[] ): NextSlot {
+	const [ slot, setSlot ] = useState< NextSlot >( { loading: false } );
 	const key = accountIds.join( ',' );
 
 	useEffect( () => {
@@ -106,7 +147,9 @@ export function useNextSlot( active, accountIds ) {
 					( answer ) => ! cancelled && setSlot( { at: answer.at } )
 				)
 				.catch(
-					( err ) => ! cancelled && setSlot( { error: err.message } )
+					( err ) =>
+						! cancelled &&
+						setSlot( { error: api.messageOf( err ) } )
 				);
 		}, 300 );
 		return () => {
@@ -122,17 +165,19 @@ export function useNextSlot( active, accountIds ) {
  * What was sent from an article, re-read while anything is publishing, and
  * what auto-share will do with it. Only used while connected.
  *
- * @param {number} postId 0 when there's no article.
- * @return {Object} `{ shares, autoShare, setAutoShare, timezone, loaded, add, remove, reload, watchPublishing }`.
+ * @param postId 0 when there's no article.
+ * @return `{ shares, autoShare, setAutoShare, timezone, loaded, add, remove, reload, watchPublishing }`.
  */
-export function useShares( postId ) {
-	const [ shares, setShares ] = useState( [] );
-	const [ autoShare, setAutoShare ] = useState( null );
-	const [ timezone, setTimezone ] = useState( null );
+export function useShares( postId: number ): Sent {
+	const [ shares, setShares ] = useState< Share[] >( [] );
+	const [ autoShare, setAutoShare ] = useState< ArticleAutoShare | null >(
+		null
+	);
+	const [ timezone, setTimezone ] = useState< string | null >( null );
 	const [ loaded, setLoaded ] = useState( false );
-	const timer = useRef( null );
+	const timer = useRef< ReturnType< typeof setTimeout > >();
 
-	const load = useCallback( () => {
+	const load = useCallback( (): Promise< SharesAnswer | null > => {
 		if ( ! postId ) {
 			return Promise.resolve( null );
 		}
@@ -150,7 +195,7 @@ export function useShares( postId ) {
 
 	useEffect( () => () => clearTimeout( timer.current ), [] );
 
-	const watchPublishing = useCallback(
+	const watchPublishing: Sent[ 'watchPublishing' ] = useCallback(
 		( justPublished = false, tries = 0 ) => {
 			clearTimeout( timer.current );
 			if ( tries >= POLL_TRIES || ! postId ) {
@@ -176,11 +221,12 @@ export function useShares( postId ) {
 	}, [ load, watchPublishing ] );
 
 	const add = useCallback(
-		( sent ) => setShares( ( current ) => [ ...sent, ...current ] ),
+		( sent: Share[] ) =>
+			setShares( ( current ) => [ ...sent, ...current ] ),
 		[]
 	);
 	const remove = useCallback(
-		( groupId ) =>
+		( groupId: string ) =>
 			setShares( ( current ) =>
 				current.filter( ( share ) => share.groupId !== groupId )
 			),
@@ -205,10 +251,13 @@ export function useShares( postId ) {
  * editor doesn't reload, and says "published" before the save reaches the
  * server, so auto-share's queued post only shows up a moment later.
  *
- * @param {string|undefined} articleStatus   The article's status in the editor.
- * @param {Function}         watchPublishing From useShares().
+ * @param articleStatus   The article's status in the editor.
+ * @param watchPublishing From useShares().
  */
-export function useWatchOnPublish( articleStatus, watchPublishing ) {
+export function useWatchOnPublish(
+	articleStatus: string | undefined,
+	watchPublishing: Sent[ 'watchPublishing' ]
+): void {
 	const previous = useRef( articleStatus );
 	useEffect( () => {
 		const was = previous.current;
@@ -223,12 +272,12 @@ export function useWatchOnPublish( articleStatus, watchPublishing ) {
  * How an article's published posts did, read once the list has any. Read
  * again only when another post finishes publishing.
  *
- * @param {number}   postId 0 to read nothing (no article, or not connected).
- * @param {Object[]} shares From useShares().
- * @return {Object} Numbers by Orbitwrite post id.
+ * @param postId 0 to read nothing (no article, or not connected).
+ * @param shares From useShares().
+ * @return Numbers by Orbitwrite post id.
  */
-export function useShareNumbers( postId, shares ) {
-	const [ numbers, setNumbers ] = useState( {} );
+export function useShareNumbers( postId: number, shares: Share[] ): Numbers {
+	const [ numbers, setNumbers ] = useState< Numbers >( {} );
 	const published = shares
 		.filter( ( share ) => share.status === 'published' )
 		.map( ( share ) => share.groupId )

@@ -14,15 +14,22 @@ export const TAGS = [ 'title', 'url', 'excerpt', 'author', 'hashtags' ];
  * Fill a template in. A line whose tags all came out empty is dropped, and
  * runs of blank lines fold into one.
  *
- * @param {string} template
- * @param {Object} values   Tag => value.
- * @return {string} Text.
+ * @param template
+ * @param values   Tag => value.
+ * @return Text.
  */
-export function renderTemplate( template, values ) {
-	const lines = [];
+export function renderTemplate(
+	template: string,
+	values: Record< string, string | null | undefined >
+): string {
+	const lines: string[] = [];
 	for ( const line of template.split( /\r\n|\r|\n/ ) ) {
-		const filled = line.replace( /\{([a-z_]+)\}/g, ( match, tag ) =>
-			TAGS.includes( tag ) ? String( values[ tag ] ?? '' ).trim() : match
+		const filled = line.replace(
+			/\{([a-z_]+)\}/g,
+			( match, tag: string ) =>
+				TAGS.includes( tag )
+					? String( values[ tag ] ?? '' ).trim()
+					: match
 		);
 		if ( /\{[a-z_]+\}/.test( line ) && filled.trim() === '' ) {
 			continue;
@@ -38,10 +45,10 @@ export function renderTemplate( template, values ) {
 /**
  * Tags the template names that don't exist, as written.
  *
- * @param {string} template
- * @return {string[]} Unknown tag names.
+ * @param template
+ * @return Unknown tag names.
  */
-export function unknownTags( template ) {
+export function unknownTags( template: string ): string[] {
 	const found = [ ...template.matchAll( /\{([^{}\s]+)\}/g ) ].map(
 		( match ) => match[ 1 ]
 	);

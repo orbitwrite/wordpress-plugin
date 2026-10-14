@@ -8,26 +8,30 @@ import { CheckboxControl, Notice } from '@wordpress/components';
 import { __, _n, sprintf } from '@wordpress/i18n';
 
 import * as api from './api';
+import type { Sent } from './hooks';
+import type { ArticleAutoShare } from './types';
 
 /**
  * Whether the checkbox applies: auto-share will take the article, and
  * nobody has shared it by hand (which takes over from auto-share).
  *
- * @param {Object} sent From useShares().
- * @return {boolean} Whether.
+ * @param sent From useShares().
+ * @return Whether.
  */
-export function autoSharePending( sent ) {
+export function autoSharePending(
+	sent: Pick< Sent, 'autoShare' | 'shares' >
+): boolean {
 	return Boolean( sent.autoShare?.pending && sent.shares.length === 0 );
 }
 
 /**
  * What auto-share will do with the article, under its checkbox.
  *
- * @param {Object} autoShare   From the shares route.
- * @param {string} settingsUrl The auto-share settings page.
- * @return {*} Help.
+ * @param autoShare   From the shares route.
+ * @param settingsUrl The auto-share settings page.
+ * @return Help.
  */
-function help( autoShare, settingsUrl ) {
+function help( autoShare: ArticleAutoShare, settingsUrl: string ) {
 	const where =
 		autoShare.when === 'now'
 			? sprintf(
@@ -67,27 +71,31 @@ function help( autoShare, settingsUrl ) {
 	);
 }
 
-/**
- * @param {Object}   props
- * @param {number}   props.postId
- * @param {Object}   props.sent        From useShares().
- * @param {string}   props.settingsUrl The auto-share settings page.
- * @param {Function} props.onError     Called with a message when saving fails.
- */
+interface Props {
+	postId: number;
+	/** From useShares(). */
+	sent: Sent;
+	/** The auto-share settings page. */
+	settingsUrl: string;
+	/** Called with a message when saving fails. */
+	onError: ( message: string ) => void;
+}
+
 export default function AutoShareToggle( {
 	postId,
 	sent,
 	settingsUrl,
 	onError,
-} ) {
-	if ( ! autoSharePending( sent ) ) {
+}: Props ) {
+	const autoShare = sent.autoShare;
+	if ( ! autoShare || ! autoSharePending( sent ) ) {
 		return null;
 	}
-	const onChange = ( enabled ) => {
-		sent.setAutoShare( { ...sent.autoShare, enabled } );
+	const onChange = ( enabled: boolean ) => {
+		sent.setAutoShare( { ...autoShare, enabled } );
 		api.setArticleAutoShare( postId, enabled )
 			.then( ( answer ) => sent.setAutoShare( answer.autoShare ) )
-			.catch( ( err ) => onError( err.message ) );
+			.catch( ( err ) => onError( api.messageOf( err ) ) );
 	};
 	return (
 		<CheckboxControl
@@ -96,9 +104,9 @@ export default function AutoShareToggle( {
 				'Share automatically when this is published',
 				'orbitwrite'
 			) }
-			checked={ sent.autoShare.enabled }
+			checked={ autoShare.enabled }
 			onChange={ onChange }
-			help={ help( sent.autoShare, settingsUrl ) }
+			help={ help( autoShare, settingsUrl ) }
 		/>
 	);
 }
@@ -106,14 +114,14 @@ export default function AutoShareToggle( {
 /**
  * What auto-share is doing with the article, or why it didn't.
  *
- * @param {Object} props
- * @param {Object} props.sent From useShares().
+ * @param props
+ * @param props.sent From useShares().
  */
-export function AutoShareNotices( { sent } ) {
+export function AutoShareNotices( { sent }: { sent: Sent } ) {
 	const state = sent.autoShare?.state;
 	return (
 		<>
-			{ [ 'queued', 'sending' ].includes( state ) &&
+			{ ( state === 'queued' || state === 'sending' ) &&
 				sent.shares.length === 0 && (
 					<Notice status="info" isDismissible={ false }>
 						{ __(

@@ -4,12 +4,7 @@
  * text and image right there, under the channel it belongs to. Anything
  * stopping a channel from taking its content is said on the channel.
  */
-import {
-	Button,
-	CheckboxControl,
-	ExternalLink,
-	TextareaControl,
-} from '@wordpress/components';
+import { Button, ExternalLink, TextareaControl } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
 
@@ -29,14 +24,16 @@ import {
 	giveOwnVersion,
 	hasOwnVersion,
 } from './versions';
+import type { Channel, Content, Versions } from './types';
+import { CheckboxControl } from './wp-components';
 
 /**
  * A channel's display name.
  *
- * @param {Object} channel
- * @return {string} Name.
+ * @param channel
+ * @return Name.
  */
-export function channelName( channel ) {
+export function channelName( channel: Channel ): string {
 	return channel.displayName || channel.handle || channel.platformName;
 }
 
@@ -44,11 +41,11 @@ export function channelName( channel ) {
  * How a channel's own version is labelled: by network ("Text for Bluesky"),
  * adding the account only when the workspace has two on that network.
  *
- * @param {Object}   channel
- * @param {Object[]} channels Every channel listed.
- * @return {string} Label.
+ * @param channel
+ * @param channels Every channel listed.
+ * @return Label.
  */
-export function versionLabel( channel, channels ) {
+export function versionLabel( channel: Channel, channels: Channel[] ): string {
 	const sameNetwork = channels.filter(
 		( other ) => other.platform === channel.platform
 	).length;
@@ -66,6 +63,16 @@ export function versionLabel( channel, channels ) {
 		  );
 }
 
+interface Props {
+	channels: Channel[];
+	selected: string[];
+	onSelect: ( id: string, checked: boolean ) => void;
+	main: Content;
+	versions: Versions;
+	onVersions: ( versions: Versions ) => void;
+	appUrl: string;
+}
+
 export default function ChannelList( {
 	channels,
 	selected,
@@ -74,7 +81,7 @@ export default function ChannelList( {
 	versions,
 	onVersions,
 	appUrl,
-} ) {
+}: Props ) {
 	const [ showUnavailable, setShowUnavailable ] = useState( false );
 
 	if ( channels.length === 0 ) {
@@ -108,7 +115,7 @@ export default function ChannelList( {
 		( channel ) => ! unavailable.includes( channel )
 	);
 
-	const row = ( channel ) => {
+	const row = ( channel: Channel ) => {
 		const isSelected = selected.includes( channel.id );
 		const own = hasOwnVersion( versions, channel.id );
 		const content = contentFor( main, versions, channel.id );
@@ -279,10 +286,10 @@ export default function ChannelList( {
 /**
  * A channel as it's shown wherever one is picked: avatar, name, network.
  *
- * @param {Object} props
- * @param {Object} props.channel
+ * @param props
+ * @param props.channel
  */
-export function ChannelLabel( { channel } ) {
+export function ChannelLabel( { channel }: { channel: Channel } ) {
 	return (
 		<span className="orbitwrite-channel">
 			{ channel.avatarUrl && (

@@ -10,39 +10,49 @@
  *
  * Pure, so the rules are tested without rendering anything.
  */
+import type { SendRequest } from './api';
+import type { Content, Versions } from './types';
 
 /**
  * Whether a channel uses its own version.
  *
- * @param {Object} versions
- * @param {string} id
- * @return {boolean} Whether.
+ * @param versions
+ * @param id
+ * @return Whether.
  */
-export function hasOwnVersion( versions, id ) {
+export function hasOwnVersion( versions: Versions, id: string ): boolean {
 	return !! versions[ id ] && ! versions[ id ].synced;
 }
 
 /**
  * What a channel will send: its own version, or the main post.
  *
- * @param {Object} main     `{ text, image }`.
- * @param {Object} versions
- * @param {string} id
- * @return {{text: string, image: Object|null}} Content.
+ * @param main
+ * @param versions
+ * @param id
+ * @return Content.
  */
-export function contentFor( main, versions, id ) {
+export function contentFor(
+	main: Content,
+	versions: Versions,
+	id: string
+): Content {
 	return hasOwnVersion( versions, id ) ? versions[ id ] : main;
 }
 
 /**
  * Give a channel its own version, starting from the main post the first time.
  *
- * @param {Object} versions
- * @param {string} id
- * @param {Object} main
- * @return {Object} Versions.
+ * @param versions
+ * @param id
+ * @param main
+ * @return Versions.
  */
-export function giveOwnVersion( versions, id, main ) {
+export function giveOwnVersion(
+	versions: Versions,
+	id: string,
+	main: Content
+): Versions {
 	const existing = versions[ id ];
 	return {
 		...versions,
@@ -55,11 +65,11 @@ export function giveOwnVersion( versions, id, main ) {
 /**
  * Put a channel back on the main post, keeping what was written for it.
  *
- * @param {Object} versions
- * @param {string} id
- * @return {Object} Versions.
+ * @param versions
+ * @param id
+ * @return Versions.
  */
-export function backToMainPost( versions, id ) {
+export function backToMainPost( versions: Versions, id: string ): Versions {
 	return versions[ id ]
 		? { ...versions, [ id ]: { ...versions[ id ], synced: true } }
 		: versions;
@@ -68,47 +78,62 @@ export function backToMainPost( versions, id ) {
 /**
  * Change a channel's own version.
  *
- * @param {Object} versions
- * @param {string} id
- * @param {Object} changes  `{ text?, image? }`.
- * @return {Object} Versions.
+ * @param versions
+ * @param id
+ * @param changes
+ * @return Versions.
  */
-export function editVersion( versions, id, changes ) {
+export function editVersion(
+	versions: Versions,
+	id: string,
+	changes: Partial< Content >
+): Versions {
 	return { ...versions, [ id ]: { ...versions[ id ], ...changes } };
 }
 
 /**
  * Start a channel's own version again from the main post.
  *
- * @param {Object} versions
- * @param {string} id
- * @param {Object} main
- * @return {Object} Versions.
+ * @param versions
+ * @param id
+ * @param main
+ * @return Versions.
  */
-export function copyMainPost( versions, id, main ) {
+export function copyMainPost(
+	versions: Versions,
+	id: string,
+	main: Content
+): Versions {
 	return editVersion( versions, id, { text: main.text, image: main.image } );
 }
 
 /**
  * Whether any of these channels sends the main post.
  *
- * @param {string[]} selected
- * @param {Object}   versions
- * @return {boolean} Whether.
+ * @param selected
+ * @param versions
+ * @return Whether.
  */
-export function mainPostInUse( selected, versions ) {
+export function mainPostInUse(
+	selected: string[],
+	versions: Versions
+): boolean {
 	return selected.some( ( id ) => ! hasOwnVersion( versions, id ) );
 }
 
 /**
  * The `send` request's content fields.
  *
- * @param {string[]} selected Channel ids, in the order shown.
- * @param {Object}   main
- * @param {Object}   versions
- * @return {Object} `{ text, attachmentId, altText, channels }`.
+ * @param selected Channel ids, in the order shown.
+ * @param main
+ * @param versions
+ * @return `{ text, attachmentId, altText, channels }`.
  */
-export function sendPayload( selected, main, versions ) {
+export function sendPayload(
+	selected: string[],
+	main: Content,
+	versions: Versions
+): Pick< SendRequest, 'text' | 'attachmentId' | 'altText' | 'channels' > {
 	return {
 		text: main.text,
 		attachmentId: main.image?.id || 0,

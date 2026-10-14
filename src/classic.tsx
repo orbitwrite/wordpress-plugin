@@ -12,16 +12,17 @@ import domReady from '@wordpress/dom-ready';
 import { createRoot, useEffect, useMemo, useState } from '@wordpress/element';
 
 import Composer from './shared/composer';
+import type { Image } from './shared/types';
 import './shared/composer.scss';
 
 /**
  * The permalink as the slug box shows it, which is the address the post has,
  * or will have once published.
  *
- * @param {string} fallback
- * @return {string} URL.
+ * @param fallback
+ * @return URL.
  */
-function readPermalink( fallback ) {
+function readPermalink( fallback: string ): string {
 	const shown = document
 		.querySelector( '#sample-permalink a' )
 		?.textContent?.trim();
@@ -31,11 +32,12 @@ function readPermalink( fallback ) {
 /**
  * The featured image's attachment id, or 0.
  *
- * @return {number} Id.
+ * @return Id.
  */
-function readThumbnailId() {
+function readThumbnailId(): number {
 	const id = parseInt(
-		document.getElementById( '_thumbnail_id' )?.value || '',
+		document.querySelector< HTMLInputElement >( '#_thumbnail_id' )?.value ||
+			'',
 		10
 	);
 	return id > 0 ? id : 0;
@@ -44,11 +46,11 @@ function readThumbnailId() {
 /**
  * Re-read a value whenever an element's contents change.
  *
- * @param {string}   selector
- * @param {Function} read
- * @return {*} The latest value.
+ * @param selector
+ * @param read
+ * @return The latest value.
  */
-function useWatched( selector, read ) {
+function useWatched< T >( selector: string, read: () => T ): T {
 	const [ value, setValue ] = useState( read );
 	useEffect( () => {
 		const target = document.querySelector( selector );
@@ -69,8 +71,29 @@ function useWatched( selector, read ) {
 	return value;
 }
 
-function ClassicPanel( { postId, permalink, status } ) {
-	const titleField = document.getElementById( 'title' );
+/** What the REST API answers for an attachment, as far as it's read here. */
+interface Media {
+	id: number;
+	source_url: string;
+	alt_text?: string;
+	mime_type?: string;
+	media_details?: {
+		width?: number;
+		height?: number;
+		sizes?: Record< string, { source_url: string } | undefined >;
+	};
+}
+
+function ClassicPanel( {
+	postId,
+	permalink,
+	status,
+}: {
+	postId: number;
+	permalink: string;
+	status: string;
+} ) {
+	const titleField = document.querySelector< HTMLInputElement >( '#title' );
 	const [ title, setTitle ] = useState( titleField?.value || '' );
 	useEffect( () => {
 		if ( ! titleField ) {
@@ -86,14 +109,14 @@ function ClassicPanel( { postId, permalink, status } ) {
 	);
 	const thumbnailId = useWatched( '#postimagediv', readThumbnailId );
 
-	const [ featured, setFeatured ] = useState( null );
+	const [ featured, setFeatured ] = useState< Image | null >( null );
 	useEffect( () => {
 		if ( ! thumbnailId ) {
 			setFeatured( null );
 			return;
 		}
 		let cancelled = false;
-		apiFetch( { path: `/wp/v2/media/${ thumbnailId }` } )
+		apiFetch< Media >( { path: `/wp/v2/media/${ thumbnailId }` } )
 			.then( ( media ) => {
 				if ( ! cancelled ) {
 					setFeatured( {
@@ -129,7 +152,7 @@ domReady( () => {
 	}
 	createRoot( root ).render(
 		<ClassicPanel
-			postId={ parseInt( root.dataset.postId, 10 ) || 0 }
+			postId={ parseInt( root.dataset.postId || '', 10 ) || 0 }
 			permalink={ root.dataset.permalink || '' }
 			status={ root.dataset.status || 'draft' }
 		/>

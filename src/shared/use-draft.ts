@@ -18,7 +18,26 @@
  */
 import { useCallback, useEffect, useState } from '@wordpress/element';
 
-export const EMPTY_DRAFT = Object.freeze( {
+import type { Image, Versions } from './types';
+
+/** An unsent post. */
+export interface Draft {
+	text: string;
+	textTouched: boolean;
+	image: Image | null;
+	imageTouched: boolean;
+	versions: Versions;
+	/** A picked wall-clock time, `YYYY-MM-DDTHH:MM`, or ''. */
+	at: string;
+}
+
+/** How a person last posted. */
+export interface Prefs {
+	selected: string[] | null;
+	when: 'next' | 'at';
+}
+
+export const EMPTY_DRAFT: Readonly< Draft > = Object.freeze( {
 	text: '',
 	textTouched: false,
 	image: null,
@@ -27,7 +46,7 @@ export const EMPTY_DRAFT = Object.freeze( {
 	at: '',
 } );
 
-export const DEFAULT_PREFS = Object.freeze( {
+export const DEFAULT_PREFS: Readonly< Prefs > = Object.freeze( {
 	// Null until the person picks: the workspace's default channels apply.
 	selected: null,
 	when: 'next',
@@ -36,21 +55,21 @@ export const DEFAULT_PREFS = Object.freeze( {
 /**
  * The storage key for an article's draft (or the admin page's).
  *
- * @param {string} scope  From the status route: site and user.
- * @param {number} postId 0 for the admin page.
- * @return {string} Key.
+ * @param scope  From the status route: site and user.
+ * @param postId 0 for the admin page.
+ * @return Key.
  */
-export function draftKey( scope, postId ) {
+export function draftKey( scope: string, postId: number ): string {
 	return `orbitwrite:draft:v2:${ scope }:${ postId || 'page' }`;
 }
 
 /**
  * The storage key for a person's preferences.
  *
- * @param {string} scope
- * @return {string} Key.
+ * @param scope
+ * @return Key.
  */
-export function prefsKey( scope ) {
+export function prefsKey( scope: string ): string {
 	return `orbitwrite:prefs:v1:${ scope }`;
 }
 
@@ -58,10 +77,10 @@ export function prefsKey( scope ) {
  * Whether a draft holds anything the person did, as opposed to what the
  * article supplied.
  *
- * @param {Object} draft
- * @return {boolean} Whether.
+ * @param draft
+ * @return Whether.
  */
-export function worthKeeping( draft ) {
+export function worthKeeping( draft: Draft ): boolean {
 	return (
 		draft.textTouched ||
 		draft.imageTouched ||
@@ -70,9 +89,11 @@ export function worthKeeping( draft ) {
 	);
 }
 
-function load( key, empty ) {
+function load< T extends object >( key: string, empty: T ): T {
 	try {
-		const stored = JSON.parse( window.localStorage.getItem( key ) );
+		const stored: unknown = JSON.parse(
+			window.localStorage.getItem( key ) ?? 'null'
+		);
 		return stored && typeof stored === 'object'
 			? { ...empty, ...stored }
 			: empty;
@@ -81,7 +102,7 @@ function load( key, empty ) {
 	}
 }
 
-function save( key, value, keep ) {
+function save< T >( key: string, value: T, keep: ( value: T ) => boolean ) {
 	try {
 		if ( keep( value ) ) {
 			window.localStorage.setItem( key, JSON.stringify( value ) );
@@ -98,13 +119,21 @@ const always = () => true;
 /**
  * A value kept in localStorage under a fixed key.
  *
- * @param {string}   key
- * @param {Object}   empty Its starting value.
- * @param {Function} keep  Whether a value is worth storing; else removed.
- * @return {[Object, Function, Function]} The value, `update( changes )` (an
- *   object, or a function of the value), and `clear()`.
+ * @param key
+ * @param empty Its starting value.
+ * @param keep  Whether a value is worth storing; else removed.
+ * @return The value, `update( changes )` (an object, or a function of the
+ *   value), and `clear()`.
  */
-export default function useStored( key, empty, keep = always ) {
+export default function useStored< T extends object >(
+	key: string,
+	empty: T,
+	keep: ( value: T ) => boolean = always
+): [
+	T,
+	( changes: Partial< T > | ( ( current: T ) => Partial< T > ) ) => void,
+	() => void,
+] {
 	const [ value, setValue ] = useState( () => load( key, empty ) );
 
 	useEffect( () => {
@@ -112,7 +141,7 @@ export default function useStored( key, empty, keep = always ) {
 	}, [ key, value ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const update = useCallback(
-		( changes ) =>
+		( changes: Partial< T > | ( ( current: T ) => Partial< T > ) ) =>
 			setValue( ( current ) => ( {
 				...current,
 				...( typeof changes === 'function'
