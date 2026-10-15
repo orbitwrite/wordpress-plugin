@@ -26,6 +26,7 @@ jobs:
       - run: composer install --no-interaction --no-progress
 
       - run: npm run lint:js
+      - run: npm run typecheck
       - run: npm run lint:css
       - run: composer lint
       - run: composer test

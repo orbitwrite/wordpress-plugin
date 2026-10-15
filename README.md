@@ -59,6 +59,7 @@ npm run build        # or `npm start` to watch
 | Check | Command | What |
 |---|---|---|
 | JS lint | `npm run lint:js` | ESLint (WordPress config) over `src` and `tests` |
+| Types | `npm run typecheck` | `tsc` in strict mode over `src` and `tests/js` (the build strips types without checking them) |
 | CSS lint | `npm run lint:css` | stylelint |
 | PHP lint | `composer lint` | PHPCS: WordPress-Extra, PHP 7.4 compatibility |
 | PHP unit | `composer test` | Draft, request bodies, image sizing and shape, media rules, times, PKCE, parsing, records, numbers, auto-share settings and when it queues, templates |
@@ -66,7 +67,7 @@ npm run build        # or `npm start` to watch
 | Contract | `npm run test:contract` | PHP's requests and the mock's answers against the API spec |
 | End to end | `npm run test:e2e` | the whole flow in Chromium, see below |
 
-`npm test` runs the JS unit and contract tests.
+`npm test` runs the typecheck, the JS unit tests and the contract tests.
 
 ### End to end, without an Orbitwrite account
 
@@ -132,10 +133,17 @@ Calling a new operation means adding it to `OPERATIONS` in
 orbitwrite.php          plugin header, autoloader, boot
 uninstall.php           removes everything the plugin stored
 includes/               PHP, one class per file (class-foo-bar.php → Foo_Bar)
-src/                    the composer (built to build/ by wp-scripts)
-  editor.js classic.js admin.js   where the composer mounts
-  auto-share.js dashboard.js      the auto-share settings page, the dashboard widget
-  shared/                         the composer, its rules and state
+src/                    the UI in TypeScript (built to build/ by wp-scripts)
+  editor.tsx classic.tsx admin.tsx   entry points: where the composer mounts
+  auto-share.tsx dashboard.tsx       entry points: auto-share settings, dashboard widget
+  lib/                               logic without React (unit tested in tests/js)
+  lib/api.ts lib/types.ts            the plugin's REST routes and what they answer
+  hooks/                             React hooks shared across screens, one per file
+  components/                        small shared UI pieces
+  composer/                          the composer: form, sections, channel list, its hooks
+  block-editor/ classic-editor/      each editor's integration around the composer
+  auto-share-settings/ summary/      the settings form, the last-four-weeks summary
+  styles/                            composer.scss
 openapi/orbitwrite.json the API contract (generated)
 scripts/                sync-openapi.mjs
 tests/php tests/js      unit tests
