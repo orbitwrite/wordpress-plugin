@@ -1,0 +1,38 @@
+name: Deploy to WordPress.org
+
+# Push a tag like v0.2.0 to release. The tag, the plugin header's Version,
+# ORBITWRITE_PLUGIN_VERSION and readme.txt's Stable tag must all agree.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the versions match the tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          header=$(sed -n 's/^ \* Version: *//p' orbitwrite.php)
+          constant=$(sed -n "s/.*'ORBITWRITE_PLUGIN_VERSION', '\(.*\)'.*/\1/p" orbitwrite.php)
+          stable=$(sed -n 's/^Stable tag: *//p' readme.txt)
+          echo "tag=$tag header=$header constant=$constant stable=$stable"
+          [ "$tag" = "$header" ] && [ "$tag" = "$constant" ] && [ "$tag" = "$stable" ]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # Copies everything not in .distignore to trunk and tags/<version>,
+      # and .wordpress-org/ (banners, icons, screenshots) to assets/.
+      - uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: orbitwrite

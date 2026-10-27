@@ -23,3 +23,7 @@
 /.wp-env.override.example.json
 /.wp-env.override.json
 /tsconfig.json
+/.wordpress-org
+/.phpunit.result.cache
+/orbitwrite.zip
+.DS_Store
