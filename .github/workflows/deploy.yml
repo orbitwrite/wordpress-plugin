@@ -10,7 +10,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check the versions match the tag
         run: |
@@ -21,7 +21,7 @@ jobs:
           echo "tag=$tag header=$header constant=$constant stable=$stable"
           [ "$tag" = "$header" ] && [ "$tag" = "$constant" ] && [ "$tag" = "$stable" ]
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
