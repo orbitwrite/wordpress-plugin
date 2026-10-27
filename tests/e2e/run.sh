@@ -3,6 +3,7 @@
 # Orbitwrite, the browser run, then tear down the servers.
 #
 #   npm run test:e2e            (CHROMIUM_PATH=/path/to/chrome to use your own)
+#   npm run screenshots         the WordPress.org screenshots, the same way
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -30,4 +31,4 @@ for _ in $(seq 1 40); do
 done
 
 SITE_URL="http://127.0.0.1:$SITE_PORT" MOCK_URL="http://127.0.0.1:$MOCK_PORT" SITE_DIR="$SITE_DIR" \
-  POST_ID="$(cat "$SITE_DIR/post-id")" node "$HERE/browser.mjs"
+  POST_ID="$(cat "$SITE_DIR/post-id")" node "$HERE/${1:-browser.mjs}"

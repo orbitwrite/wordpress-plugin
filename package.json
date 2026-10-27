@@ -13,6 +13,7 @@
     "plugin-zip": "npm run build && wp-scripts plugin-zip",
     "env": "wp-env",
     "test:e2e": "tests/e2e/run.sh",
+    "screenshots": "tests/e2e/run.sh wporg-screenshots.mjs",
     "test:contract": "node --test tests/contract/contract.test.mjs",
     "openapi:sync": "node scripts/sync-openapi.mjs",
     "test": "npm run typecheck && npm run test:js && npm run test:contract",
