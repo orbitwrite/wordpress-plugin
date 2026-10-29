@@ -483,7 +483,7 @@ final class Rest {
 			return $sent;
 		}
 
-		$records = Shares::records_for( $sent['result'], $sent['entries'], $schedule, $user_id );
+		$records = Shares::records_for( $sent['result'], $sent['entries'], $schedule, $user_id, $organization_id );
 		if ( $post_id ) {
 			Shares::add( $post_id, $records );
 		}
@@ -523,7 +523,9 @@ final class Rest {
 			return new WP_Error( 'orbitwrite_forbidden', __( 'You can\'t view this post.', 'orbitwrite' ), array( 'status' => 403 ) );
 		}
 		$connection = Token_Store::get( get_current_user_id() );
-		$records    = $connection ? Shares::refresh( Api::for_current_user(), $post_id ) : Shares::all( $post_id );
+		$records    = $connection
+			? Shares::refresh( Api::for_current_user(), $post_id, (string) ( $connection['organization']['id'] ?? '' ) )
+			: Shares::all( $post_id );
 		$records    = array_filter(
 			$records,
 			static function ( $record ) {
@@ -713,15 +715,17 @@ final class Rest {
 	}
 
 	/**
-	 * Whether the user may send this attachment: any Media Library image for
-	 * someone who can upload (the library shows them all), or the article's
-	 * own featured image.
+	 * Whether the user may send this attachment: one they can see, and then
+	 * any Media Library image for someone who can upload (the library shows
+	 * them all), or the article's own featured image. Seeing it matters for
+	 * the featured image too, which anyone editing an article can point at
+	 * any attachment id.
 	 *
 	 * @param int $attachment_id Attachment.
 	 * @param int $post_id       Article, or 0.
 	 */
 	private static function may_attach( int $attachment_id, int $post_id ): bool {
-		if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+		if ( 'attachment' !== get_post_type( $attachment_id ) || ! current_user_can( 'read_post', $attachment_id ) ) {
 			return false;
 		}
 		if ( current_user_can( 'upload_files' ) ) {

@@ -72,24 +72,26 @@ final class Shares {
 	 * @param array $result   The API's create result.
 	 * @param array $entries  What was sent, per channel (see Post_Builder::build).
 	 * @param array $schedule `{ scheduled_at, publish_now }`.
-	 * @param int   $user_id  Who sent it.
+	 * @param int    $user_id         Who sent it.
+	 * @param string $organization_id The workspace it went to.
 	 */
-	public static function records_for( array $result, array $entries, array $schedule, int $user_id ): array {
+	public static function records_for( array $result, array $entries, array $schedule, int $user_id, string $organization_id ): array {
 		$records = array();
 		foreach ( Post_Builder::groups_for( $entries, (array) ( $result['groupIds'] ?? array() ) ) as $group ) {
 			$records[] = array(
-				'group_ids'    => $group['group_ids'],
-				'account_ids'  => $group['account_ids'],
-				'own_version'  => ! $group['synced'],
-				'scheduled_at' => (string) ( $result['scheduledAt'] ?? $schedule['scheduled_at'] ),
-				'publish_now'  => ! empty( $schedule['publish_now'] ),
-				'status'       => ! empty( $result['publishing'] ) ? 'publishing' : 'scheduled',
-				'bucket'       => null,
-				'last_error'   => null,
-				'links'        => array(),
-				'excerpt'      => self::excerpt( $group['text'] ),
-				'sent_by'      => $user_id,
-				'sent_at'      => time(),
+				'group_ids'       => $group['group_ids'],
+				'account_ids'     => $group['account_ids'],
+				'own_version'     => ! $group['synced'],
+				'scheduled_at'    => (string) ( $result['scheduledAt'] ?? $schedule['scheduled_at'] ),
+				'publish_now'     => ! empty( $schedule['publish_now'] ),
+				'status'          => ! empty( $result['publishing'] ) ? 'publishing' : 'scheduled',
+				'bucket'          => null,
+				'last_error'      => null,
+				'links'           => array(),
+				'excerpt'         => self::excerpt( $group['text'] ),
+				'sent_by'         => $user_id,
+				'sent_at'         => time(),
+				'organization_id' => $organization_id,
 			);
 		}
 		return $records;
@@ -120,17 +122,19 @@ final class Shares {
 	}
 
 	/**
-	 * Re-read the status of every record that can still change, and save it.
-	 * A failed read leaves the stored status alone.
+	 * Re-read the status of every record that can still change and that the
+	 * viewer's workspace can see, and save it. A failed read leaves the stored
+	 * status alone.
 	 *
-	 * @param Api $api     Client.
-	 * @param int $post_id Article.
+	 * @param Api    $api             Client.
+	 * @param int    $post_id         Article.
+	 * @param string $organization_id The viewer's workspace.
 	 */
-	public static function refresh( Api $api, int $post_id ): array {
+	public static function refresh( Api $api, int $post_id, string $organization_id ): array {
 		$records = self::all( $post_id );
 		$open    = array();
 		foreach ( $records as $record ) {
-			if ( ! in_array( $record['status'] ?? '', self::SETTLED, true ) ) {
+			if ( self::refreshable( $record, $organization_id, $api->user_id() ) ) {
 				foreach ( (array) ( $record['group_ids'] ?? array() ) as $group_id ) {
 					$open[] = (string) $group_id;
 				}
@@ -152,13 +156,34 @@ final class Shares {
 		}
 
 		foreach ( $records as $index => $record ) {
-			if ( in_array( $record['status'] ?? '', self::SETTLED, true ) ) {
-				continue;
+			if ( self::refreshable( $record, $organization_id, $api->user_id() ) ) {
+				$records[ $index ] = self::apply( $record, $entries );
 			}
-			$records[ $index ] = self::apply( $record, $entries );
 		}
 		update_post_meta( $post_id, self::META_KEY, $records );
 		return $records;
+	}
+
+	/**
+	 * Whether a viewer can re-read a record's status. Pure.
+	 *
+	 * Only from the workspace it was sent to: anywhere else the listing
+	 * doesn't have it, which apply() reads as deleted, and deleted is never
+	 * re-read. A record from before the workspace was kept is re-read only by
+	 * whoever sent it.
+	 *
+	 * @param array  $record          Record.
+	 * @param string $organization_id The viewer's workspace.
+	 * @param int    $user_id         The viewer.
+	 */
+	public static function refreshable( array $record, string $organization_id, int $user_id ): bool {
+		if ( in_array( $record['status'] ?? '', self::SETTLED, true ) ) {
+			return false;
+		}
+		if ( isset( $record['organization_id'] ) ) {
+			return '' !== $organization_id && $record['organization_id'] === $organization_id;
+		}
+		return (int) ( $record['sent_by'] ?? 0 ) === $user_id;
 	}
 
 	/**

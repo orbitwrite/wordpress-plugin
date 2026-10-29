@@ -89,7 +89,8 @@ final class SharesTest extends TestCase {
 				array( 'account_id' => 'acc_bsky', 'synced' => false, 'text' => 'Own', 'media_id' => null ),
 			),
 			array( 'scheduled_at' => '2026-10-15T08:00:00Z', 'publish_now' => false ),
-			3
+			3,
+			'org_1'
 		);
 		$this->assertCount( 2, $records );
 		$this->assertSame( array( 'grp_a' ), $records[0]['group_ids'] );
@@ -99,6 +100,22 @@ final class SharesTest extends TestCase {
 		$this->assertSame( array( 'acc_bsky' ), $records[1]['account_ids'] );
 		$this->assertTrue( $records[1]['own_version'] );
 		$this->assertTrue( Shares::present( $records[1], null )['ownVersion'] );
+		$this->assertSame( 'org_1', $records[0]['organization_id'] );
+	}
+
+	public function test_only_the_workspace_a_post_went_to_rereads_it(): void {
+		$record = array_merge( $this->record(), array( 'organization_id' => 'org_1', 'sent_by' => 3 ) );
+		$this->assertTrue( Shares::refreshable( $record, 'org_1', 4 ) );
+		// Another workspace's listing doesn't have it, and would mark it deleted.
+		$this->assertFalse( Shares::refreshable( $record, 'org_2', 3 ) );
+		$this->assertFalse( Shares::refreshable( $record, '', 3 ) );
+		$this->assertFalse( Shares::refreshable( array_merge( $record, array( 'status' => 'published' ) ), 'org_1', 3 ) );
+	}
+
+	public function test_a_record_without_its_workspace_is_reread_only_by_its_sender(): void {
+		$record = array_merge( $this->record(), array( 'sent_by' => 3 ) );
+		$this->assertTrue( Shares::refreshable( $record, 'org_1', 3 ) );
+		$this->assertFalse( Shares::refreshable( $record, 'org_1', 4 ) );
 	}
 
 	public function test_unexpected_grouping_falls_back_to_one_record(): void {
@@ -106,7 +123,8 @@ final class SharesTest extends TestCase {
 			array( 'groupIds' => array( 'grp_a', 'grp_b', 'grp_c' ), 'publishing' => true ),
 			array( array( 'account_id' => 'acc_x', 'synced' => true, 'text' => 'Main', 'media_id' => null ) ),
 			array( 'scheduled_at' => '2026-10-15T08:00:00Z', 'publish_now' => true ),
-			3
+			3,
+			'org_1'
 		);
 		$this->assertCount( 1, $records );
 		$this->assertSame( array( 'grp_a', 'grp_b', 'grp_c' ), $records[0]['group_ids'] );

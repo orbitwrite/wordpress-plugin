@@ -364,7 +364,7 @@ final class Auto_Share {
 		if ( is_wp_error( $sent ) ) {
 			return $sent;
 		}
-		Shares::add( $post->ID, Shares::records_for( $sent['result'], $sent['entries'], $schedule, $author ) );
+		Shares::add( $post->ID, Shares::records_for( $sent['result'], $sent['entries'], $schedule, $author, $org_id ) );
 		return true;
 	}
 
